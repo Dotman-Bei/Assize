@@ -25,6 +25,12 @@ interface Skill {
   readonly version?: string;
   readonly commit?: string;
   readonly files?: readonly { path: string; sha256: string }[];
+  /**
+   * `false` for a package that is pinned but deliberately not installed yet.
+   * A pin records what was read; installation is a separate decision tied to the
+   * phase that first needs the code.
+   */
+  readonly installed?: boolean;
 }
 
 function main(): void {
@@ -36,6 +42,13 @@ function main(): void {
   let unchecked = 0;
 
   for (const skill of lock.skills) {
+    if (skill.installed === false) {
+      process.stdout.write(
+        `  PINNED    ${skill.id} @ ${skill.version ?? "?"} (not installed yet, by intent)\n`,
+      );
+      unchecked += 1;
+      continue;
+    }
     if (skill.kind === "npm" && skill.version !== undefined) {
       const packageName = skill.source.replace("https://registry.npmjs.org/", "");
       try {

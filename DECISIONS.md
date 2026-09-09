@@ -375,3 +375,54 @@ begin. Without it, the fallback is PRD §26 K1: switch to Path K, label every sa
 every claim about validator-delivered measurement, and publish the cadence and its trust cost. K1 is
 not fired here, because the blocker is a missing document rather than a missing capability — the
 markets do emit subscribable events (D-012).
+
+---
+
+## D-015: G1 passes. Phase P1 is complete, and the reactivity path is confirmed to exist
+
+**Date:** 2026-09-10, Phase P1
+**Status:** accepted. **Supersedes D-014**, whose blocker is resolved.
+
+**Evidence.** The Somnia reactivity reference is published at
+`https://docs.somnia.network/developer/reactivity/reactivity-onchain.md`, and GitBook serves every
+page as raw Markdown by appending `.md` — which is how it was read, the HTML being a client-rendered
+shell with no content in it. It is now pinned in `skills-lock.json`, alongside
+`@somnia-chain/reactivity-contracts@0.2.1`, which is pinned but deliberately not installed: P1
+deploys nothing and writes no subscriber.
+
+What it settles, all of it read rather than recalled:
+
+- The precompile is at `0x0100`, exposed in Solidity as
+  `SomniaExtensions.SOMNIA_REACTIVITY_PRECOMPILE_ADDRESS`.
+- A handler inherits `SomniaEventHandler` and overrides
+  `_onEvent(address emitter, bytes32[] eventTopics, bytes data)`.
+- **Inside a reactive call, `msg.sender` is `0x0100`.** That is precisely the access control PRD §12's
+  spoofed-callback row requires, and it is now a fact rather than an assumption.
+- The subscription owner pays gas per invocation; the balance floor is enforced only at creation, and
+  a subscription keeps firing until the owner cannot pay an individual invocation.
+- Two JSON-RPC methods, `somnia_reactivityGetSubscriptions` and
+  `somnia_reactivityGetSubscriptionInfo`, expose subscription state including `gas_limit` and
+  `max_fee_per_gas`. These are what gate G11 will read.
+
+**One finding that would have made the probe lie.** `eth_getCode` at `0x0100` on Shannon returns
+`0x`. A precompile is implemented by the node and has no deployed bytecode. The previous
+`probe-reactivity.ts` treated empty code as `PROTOCOL_CONFIG_CHANGED`, so it would have reported
+reactivity as missing on a chain where it works — a false negative in the one direction this product
+cannot afford, since it would have argued for firing K1 and abandoning Path R. Liveness is now proven
+by the RPC method's presence instead, distinguishing `-32601` (method absent) from `-32602` (method
+present, arguments rejected). Established by experiment against the live node, not by reading.
+
+**Result.** `pnpm probe:all` exits zero: 10 checks, none blocked. **G1 and G2 both pass, so Phase P1's
+stop boundary is met.**
+
+**What this does not establish.** That reactivity exists on Shannon is not evidence that Assize has
+delivered a sample by it. That is claim C-003 and gate G3, and it belongs to Phase P2. No claim was
+raised on the strength of the probe, and evidence attached to C-003 was removed for saying more about
+the network than about this product.
+
+**Cost.** The reference warns that a subscription's logs are themselves matched against
+subscriptions, so "a subscription can provoke a recursive explosion, unstoppably draining the owner's
+balance". Assize's subscriber writes samples, and writing a sample emits `SampleRecorded`. If that
+event ever matches Assize's own filter the loop is self-feeding and drains the handler prefund. The
+P2 filter must exclude the registry's own address, and a test must prove it. Recorded here so that
+P2 meets it as a requirement rather than as an incident.

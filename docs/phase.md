@@ -1,29 +1,33 @@
 # Current phase
 
-**Phase: P1. Status: in progress. G2 closed, G1 open.**
+**Phase: P1. Status: COMPLETE. G1 and G2 both pass.**
 
-Updated 2026-09-10, twice. G2 passes. G1 does not, and the phase stays open because of it. This file
-is not marked passed on thin evidence: the reason G1 is open is written below rather than deferred.
+Updated 2026-09-10. Both gates in P1's stop boundary are met, so nothing in P1 blocks a move to P2.
 
-The second update narrowed G1's blocker considerably. `pnpm probe:dreamdex` now runs against live
-Shannon testnet and exits zero. One input is still missing, named below.
+P2 is not started. Its first act is a deployment, and PRD §26 K9 is an open `OWNER DECISION` about
+whether the submission path continues at all. Deploying is cheap to do and awkward to undo, so the
+phase advances on the owner's word rather than on this file's.
 
 ## Stop boundary
 
-Nothing is deployed and nothing calls a live market until G1 and G2 pass.
+Nothing is deployed and nothing calls a live market until G1 and G2 pass. **Both now pass.** Nothing
+has been deployed.
 
 - **G1**, no compiled-in protocol facts: `pnpm probe:all` exits zero and the address-literal check
   finds nothing in `apps/` or `packages/`.
-  **Status: NOT PASSED, one blocker left.** Three of its four parts pass:
+  **Status: PASSED**, 2026-09-10. `pnpm probe:all` exits zero: 10 checks, none blocked. Its parts:
   - static: `pnpm check:no-address-literals` finds nothing in `apps/`, `packages/`, `contracts/src`;
   - live market metadata: `pnpm probe:dreamdex` exits zero against Shannon testnet (chain 50312 at
     `https://dream-rpc.somnia.network`), discovering markets from `MarketCreated` logs through the
     pinned `@somnia-chain/markets-sdk@0.29.0` and confirming a configured market id;
   - venue addresses: read from the SDK at runtime, none compiled in.
 
-  The remaining part is `pnpm probe:reactivity`, which needs the Somnia reactivity precompile's
-  address. That address is in none of the pinned sources, and PRD §0.3 forbids inventing a
-  precompile calling convention. See DECISIONS.md D-014, which supersedes D-010.
+  - reactivity: `pnpm probe:reactivity` confirms Shannon serves on-chain reactivity, via
+    `somnia_reactivityGetSubscriptions`. Note that `eth_getCode` at the precompile returns `0x` by
+    design — a precompile lives in the node — so presence is proven by the RPC, never by reading
+    code. See DECISIONS.md D-015, which supersedes D-014.
+
+  All four items in AGENTS.md §0.2's pinning list are pinned in `skills-lock.json`.
 - **G2**, evaluator agreement: the Solidity evaluator and `packages/reference` agree on 10,000
   generated commitment and sample pairs, zero divergence.
   **Status: PASSED**, 2026-09-10. `pnpm test:differential`, seed `0xa551235`, 10,000 pairs, zero
@@ -59,16 +63,23 @@ repository is organised to prevent.
 Update this file in the commit that closes a gate. Do not mark a phase passed on thin evidence. If
 the evidence is thin, write here why, and leave the phase open.
 
-## What P1 needs before it closes
+## What P1 established, and what it did not
 
-**One thing: the Somnia reactivity reference.** The precompile's address on Shannon and its `onEvent`
-handler convention. It is the fourth item in AGENTS.md §0.2's pinning list and the only one not
-supplied. With it, `probe:reactivity` completes, G1 closes, and P2 can begin. See D-014.
+Established: the two evaluators agree; the registry stores what it is given and re-derives verdicts
+from storage; no protocol fact is compiled in; live market metadata reads from Shannon; and the
+reactivity path exists on Shannon.
 
-If it turns out the reactivity precompile is genuinely unavailable rather than merely undocumented,
-PRD §26 K1 governs: switch to Path K, label every sample `KEEPER`, and delete every claim about
-validator-delivered measurement. K1 is not fired today — the markets do emit subscribable events
-(D-012), so the capability exists; only the document is missing.
+**Not established: that Assize has measured anything.** No sample has been written by Assize, no
+breach recorded against a live market, no bond forfeited. Those are C-003 to C-005 and gates G3 to
+G6, and they belong to P2 and P3. That reactivity exists on the network says nothing about whether
+this product has used it, and no claim was raised on the strength of the probe.
 
-Separately, K9 (`OWNER DECISION`) governs whether the submission path continues at all; P1 is
-identical under either branch.
+## Before P2 begins
+
+1. **K9 (`OWNER DECISION`).** P2's first act is a deployment. Do not deploy into a closed submission
+   path without the owner's decision.
+2. **A recursion guard, as a requirement rather than an incident.** The pinned reactivity reference
+   warns that a handler's own logs are matched against subscriptions, so a subscription can feed
+   itself and drain the owner's balance. Assize's subscriber emits `SampleRecorded` when it writes a
+   sample. The P2 filter must exclude the registry's own address, and a test must prove it. D-015.
+3. **STT for handler gas**, from the faucet in the Somnia Telegram community.

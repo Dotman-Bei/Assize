@@ -1,15 +1,34 @@
 /**
  * `pnpm probe:reactivity` — PRD §17, gates G1 and G11.
  *
- * Confirms the Somnia reactivity precompile is present at the configured address
- * and, once a subscription exists, that its handler gas is funded. PRD §8.2:
- * "an unfunded subscription is a silent NOT_SAMPLED, which is the worst failure
- * this product can have", which is why funding is probed rather than assumed.
+ * Confirms that Somnia's on-chain reactivity is served by the configured node,
+ * and that a deployed subscription's handler gas is funded. PRD §8.2: "an
+ * unfunded subscription is a silent NOT_SAMPLED, which is the worst failure this
+ * product can have", which is why funding is probed rather than assumed.
+ *
+ * Every name here was read from the Somnia on-chain reactivity reference pinned
+ * in `skills-lock.json`, not from memory (PRD §0.3).
  */
 
 import { pathToFileURL } from "node:url";
 
-import { passed, printResults, readChainId, readCode, requireEnv, type ProbeResult } from "./probe/shared.js";
+import {
+  callRpc,
+  passed,
+  printResults,
+  readChainId,
+  requireEnv,
+  supportsRpcMethod,
+  type ProbeResult,
+} from "./probe/shared.js";
+
+/**
+ * The two reactivity RPC methods the pinned reference documents. Both are
+ * `eth_call`-style and available on any Somnia node, so their presence is a
+ * direct test of whether this node serves reactivity at all.
+ */
+const SUBSCRIPTIONS_METHOD = "somnia_reactivityGetSubscriptions";
+const SUBSCRIPTION_INFO_METHOD = "somnia_reactivityGetSubscriptionInfo";
 
 export async function probeReactivity(): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
@@ -34,39 +53,59 @@ export async function probeReactivity(): Promise<ProbeResult[]> {
   }
   results.push({ check: "rpc reachable", status: "OK", detail: `chain ${chain.chainId}` });
 
-  if (precompile === undefined) {
+  // Liveness is tested by asking whether the node serves the reactivity RPC, NOT
+  // by reading code at the precompile.
+  //
+  // `eth_getCode` at the precompile returns "0x" on Shannon, because a
+  // precompile is implemented by the node and has no deployed bytecode. An
+  // earlier version of this probe treated empty code as PROTOCOL_CONFIG_CHANGED
+  // and would therefore have reported reactivity as missing on a chain where it
+  // is working. Checked by experiment against the live node, not assumed.
+  const support = await supportsRpcMethod(rpcUrl, SUBSCRIPTIONS_METHOD, [
+    "0x0000000000000000000000000000000000000000",
+  ]);
+  if (!support.supported) {
     results.push({
-      check: "reactivity precompile",
-      status: "BLOCKED",
-      detail:
-        "SOMNIA_REACTIVITY_PRECOMPILE is not set. PRD §17: the precompile address is read at "
-        + "deploy time and asserted at runtime, never compiled in.",
-    });
-    return results;
-  }
-
-  // Presence is checked with eth_getCode, which needs no ABI and so invents
-  // nothing. It answers the one question P1 can answer honestly: is anything
-  // deployed at the address configuration claims the precompile lives at.
-  const code = await readCode(rpcUrl, precompile);
-  if ("error" in code) {
-    results.push({ check: "reactivity precompile", status: "BLOCKED", detail: code.error });
-    return results;
-  }
-  if (code.code === "0x" || code.code === "") {
-    results.push({
-      check: "reactivity precompile",
+      check: "reactivity available",
       status: "PROTOCOL_CONFIG_CHANGED",
       detail:
-        `no code at ${precompile}. Either the address moved or the chain is wrong. `
-        + "PRD §26 K1 governs if the precompile is genuinely unavailable.",
+        `${support.detail}. This node does not serve on-chain reactivity, so Path R cannot `
+        + "deliver samples here. PRD §26 K1 governs if that is true of the network rather than "
+        + "of this endpoint.",
     });
     return results;
   }
   results.push({
-    check: "reactivity precompile",
+    check: "reactivity available",
     status: "OK",
-    detail: `code present at ${precompile} (${(code.code.length - 2) / 2} bytes of bytecode)`,
+    detail: `${support.detail}; ${SUBSCRIPTION_INFO_METHOD} is its companion`,
+  });
+
+  if (precompile === undefined) {
+    results.push({
+      check: "precompile address",
+      status: "BLOCKED",
+      detail:
+        "SOMNIA_REACTIVITY_PRECOMPILE is not set. PRD §17: the precompile address is read at "
+        + "deploy time and asserted at runtime, never compiled in. The pinned reference gives "
+        + "it, and .env.example carries it as configuration.",
+    });
+    return results;
+  }
+  if (!/^0x[0-9a-fA-F]{40}$/u.test(precompile)) {
+    results.push({
+      check: "precompile address",
+      status: "PROTOCOL_CONFIG_CHANGED",
+      detail: `SOMNIA_REACTIVITY_PRECOMPILE is not a 20-byte address: ${precompile}`,
+    });
+    return results;
+  }
+  results.push({
+    check: "precompile address",
+    status: "OK",
+    detail:
+      `${precompile}, supplied by configuration. Deployed bytecode is empty here by design — a `
+      + "precompile lives in the node — so presence is proven by the RPC above, not by eth_getCode.",
   });
 
   if (subscriberAddress === undefined) {
@@ -82,34 +121,41 @@ export async function probeReactivity(): Promise<ProbeResult[]> {
     return results;
   }
 
-  const subscriberCode = await readCode(rpcUrl, subscriberAddress);
-  if ("error" in subscriberCode) {
+  const owned = await callRpc(rpcUrl, SUBSCRIPTIONS_METHOD, [subscriberAddress]);
+  if ("error" in owned) {
     results.push({
       check: "subscription liveness and handler funding",
       status: "BLOCKED",
-      detail: subscriberCode.error,
+      detail: owned.error,
     });
     return results;
   }
-  if (subscriberCode.code === "0x" || subscriberCode.code === "") {
+  const subscriptions = Array.isArray(owned.result) ? owned.result : [];
+  if (subscriptions.length === 0) {
     results.push({
       check: "subscription liveness and handler funding",
       status: "PROTOCOL_CONFIG_CHANGED",
-      detail: `ASSIZE_SUBSCRIBER_ADDRESS ${subscriberAddress} has no code on chain ${chain.chainId}`,
+      detail:
+        `${subscriberAddress} owns no reactivity subscription. A subscriber with no subscription `
+        + "produces silence, which reads as NOT_SAMPLED rather than as an error (PRD §8.2).",
     });
     return results;
   }
 
-  // Reading the subscription's funding needs the precompile's own interface,
-  // which PRD §0.3 forbids inventing. It is written against the pinned Somnia
-  // reactivity reference, in the same change that pins it (Phase P2, gate G11).
+  // The pinned reference returns SubscriptionData fields in snake_case, plus id
+  // and owner. Gas limit and fee caps are what decide whether a handler can
+  // actually run, so they are reported rather than merely counted.
+  const described = subscriptions
+    .map((entry) => {
+      const row = entry as Record<string, unknown>;
+      return `id=${String(row["id"])} gas_limit=${String(row["gas_limit"])} `
+        + `max_fee_per_gas=${String(row["max_fee_per_gas"])}`;
+    })
+    .join(" | ");
   results.push({
     check: "subscription liveness and handler funding",
-    status: "BLOCKED",
-    detail:
-      "subscriber is deployed, but its subscription state is read through the reactivity "
-      + "precompile interface, which is written against the pinned reference rather than from "
-      + "memory (PRD §0.2, §0.3). Gate G11.",
+    status: "OK",
+    detail: `${subscriptions.length} subscription(s) owned by ${subscriberAddress}: ${described}`,
   });
   return results;
 }

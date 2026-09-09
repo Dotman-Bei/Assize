@@ -1,9 +1,9 @@
 {
   "$comment": [
-    "AGENTS.md and PRD.md §0.2: the official documentation is installed as pinned skills, by",
+    "AGENTS.md and PRD.md \u00a70.2: the official documentation is installed as pinned skills, by",
     "source, path and SHA-256. Nothing in this repository is written from memory about any of",
-    "them (§0.3). When a pin no longer matches, upstream changed: re-inspect, record the",
-    "discrepancy in DECISIONS.md, and adapt while preserving the thesis in PRD §4.",
+    "them (\u00a70.3). When a pin no longer matches, upstream changed: re-inspect, record the",
+    "discrepancy in DECISIONS.md, and adapt while preserving the thesis in PRD \u00a74.",
     "Verify with `pnpm skills:verify`. Fetch with `pnpm skills:install`."
   ],
   "pinnedAt": "2026-09-10",
@@ -20,7 +20,7 @@
     },
     {
       "id": "dreamdex-bot-kit",
-      "what": "DreamDEX Bot Kit. PRD §8.3: the baseline maker's lineage.",
+      "what": "DreamDEX Bot Kit. PRD \u00a78.3: the baseline maker's lineage.",
       "source": "https://github.com/somnia-chain/dreamdex-bot-kit",
       "kind": "git",
       "path": ".skills/dreamdex-bot-kit",
@@ -29,7 +29,7 @@
     },
     {
       "id": "ec-dreamdex-hackathon-template",
-      "what": "Hackathon starter template. PRD §8.3: the app base. Carries solidity/src/IEventContracts.sol, the on-chain interface for a binary pool.",
+      "what": "Hackathon starter template. PRD \u00a78.3: the app base. Carries solidity/src/IEventContracts.sol, the on-chain interface for a binary pool.",
       "source": "https://github.com/IronicDeGawd/ec-dreamdex-hackathon-template",
       "kind": "git",
       "path": ".skills/ec-dreamdex-hackathon-template",
@@ -45,20 +45,49 @@
     },
     {
       "id": "somnia-markets-sdk",
-      "what": "@somnia-chain/markets-sdk. PRD §8.3: book and trade streams into the web surface, and live market metadata for the probes. PRD §0.4 prefers its methods over hand-rolled contract calls.",
+      "what": "@somnia-chain/markets-sdk. PRD \u00a78.3: book and trade streams into the web surface, and live market metadata for the probes. PRD \u00a70.4 prefers its methods over hand-rolled contract calls.",
       "source": "https://registry.npmjs.org/@somnia-chain/markets-sdk",
       "kind": "npm",
       "package": "@somnia-chain/markets-sdk",
       "version": "0.29.0",
       "integrity": "sha512-8qEtXIBh8/mdn/L6NGOZKRMyPxyATL/Rl6/TSQ2mZSJCVT5zGC4TwsRZnKTBlSgakQdAoeLCTdZdilcSaluUZg==",
       "shasum": "9f0558456b689f455ecebf1c8e25a251ba7dfd42"
+    },
+    {
+      "id": "somnia-reactivity-onchain",
+      "what": "Somnia on-chain reactivity reference. The precompile address, the SomniaEventHandler._onEvent convention, subscription funding and automatic removal, and the two reactivity JSON-RPC methods. PRD \u00a74 and \u00a78.2 rest on this; DECISIONS.md D-001 cites it.",
+      "source": "https://docs.somnia.network/developer/reactivity/reactivity-onchain.md",
+      "kind": "http",
+      "path": ".skills/somnia-reactivity-onchain.md",
+      "sha256": "07332c0fc790f71a4b79c372b11209d055e4c49fab433ce355ebfa1b10fb7fa5",
+      "bytes": 33836
+    },
+    {
+      "id": "somnia-reactivity-index",
+      "what": "Somnia reactivity overview, distinguishing on-chain from off-chain reactivity. Assize uses on-chain reactivity for Path R.",
+      "source": "https://docs.somnia.network/developer/reactivity.md",
+      "kind": "http",
+      "path": ".skills/somnia-reactivity.md",
+      "sha256": "568b8ac8afb52a01bc8e3619bd60f62c7a8ec2e9f196fe82215d0bc8ede24ea4",
+      "bytes": 2918
+    },
+    {
+      "id": "somnia-reactivity-contracts",
+      "what": "@somnia-chain/reactivity-contracts. SomniaEventHandler and SomniaExtensions, which CoverageSubscriber inherits from in Phase P2. Not yet installed: P1 deploys nothing and writes no subscriber.",
+      "source": "https://registry.npmjs.org/@somnia-chain/reactivity-contracts",
+      "kind": "npm",
+      "package": "@somnia-chain/reactivity-contracts",
+      "version": "0.2.1",
+      "integrity": "sha512-5F+whWQz9nTvP/3Mml/NZqF2+SBDHR6GZ1EEeZQlqpvnltNzA3y0y6gfm7axWIKBTuXcPgToYOF7TX6C4LoUbA==",
+      "installed": false
     }
   ],
   "$notes": [
-    "The Somnia reactivity reference named in PRD §0.2 is NOT pinned here. The SDK ships",
-    "spotStopRegistryEventsAbi and spotStopRegistryWriteAbi, which are the spot stop-order",
-    "registry DECISIONS.md D-001 cites as the pattern Path R copies, but the precompile's own",
-    "calling convention is not in any source inspected so far. CoverageSubscriber is Phase P2",
-    "and is written against that reference in the same change that pins it (§0.3)."
+    "All four items in AGENTS.md \u00a70.2's pinning list are now pinned: the DreamDEX developer docs, the",
+    "Bot Kit, the starter template, and the Somnia reactivity reference. The markets SDK and the",
+    "reactivity contracts package are pinned alongside them.",
+    "@somnia-chain/reactivity-contracts is pinned but not installed: Phase P1 deploys nothing and",
+    "writes no CoverageSubscriber. It is installed in the P2 change that first inherits from",
+    "SomniaEventHandler, and `pnpm skills:verify` reports it as not installed until then."
   ]
 }

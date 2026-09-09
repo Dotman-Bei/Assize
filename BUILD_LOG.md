@@ -230,3 +230,76 @@ exist only inside the run that made them and `forge test` skips honestly.
   `dream-rpc.shannon.somnia.network`, which does not resolve. The working endpoint is
   `dream-rpc.somnia.network`. Not edited — the design authority is not ours to change.
 - **K9** (`OWNER DECISION`): the submission window.
+
+---
+
+## 2026-09-10 — G1 passes. Phase P1 complete.
+
+**Outcome. G1 and G2 both pass. P1's stop boundary is met.** Nothing has been deployed, and P2 is not
+started: its first act is a deployment, and K9 is an open `OWNER DECISION`.
+
+### How the last blocker fell
+
+The Somnia reactivity reference is published, at
+`docs.somnia.network/developer/reactivity/reactivity-onchain.md`. The HTML is a client-rendered shell
+with no content in it; GitBook serves every page as raw Markdown by appending `.md`, which is how it
+was read. Both pages and `@somnia-chain/reactivity-contracts@0.2.1` are now pinned. All four items in
+AGENTS.md §0.2's list are pinned.
+
+It settles: the precompile is at `0x0100`; a handler inherits `SomniaEventHandler` and overrides
+`_onEvent(address, bytes32[], bytes)`; **`msg.sender` inside a reactive call is `0x0100`**, which is
+exactly the access control PRD §12 requires; and `somnia_reactivityGetSubscriptions` /
+`somnia_reactivityGetSubscriptionInfo` expose subscription state including `gas_limit` and
+`max_fee_per_gas`, which is what G11 will read.
+
+### The finding that mattered most
+
+`eth_getCode` at `0x0100` returns `0x`. A precompile is implemented by the node and has no deployed
+bytecode. The previous `probe-reactivity.ts` treated empty code as `PROTOCOL_CONFIG_CHANGED`, so it
+would have reported reactivity as **missing on a chain where it works** — and that false negative
+argues for firing K1 and abandoning Path R, which is the product's whole thesis. Liveness is now
+proven by the RPC method's presence, distinguishing `-32601` (absent) from `-32602` (present,
+arguments rejected). Found by testing against the live node, not by reading.
+
+### Commands
+
+```
+pnpm probe:all        (G1)   exit 0   10 checks, 0 blocked   <- PASSES
+pnpm test:differential (G2)  exit 0   10,000 pairs, zero divergence
+pnpm skills:verify           exit 0   7 pinned, 0 mismatched
+pnpm claim:verify --offline  exit 0   C-001 and C-006 now R1
+pnpm test                    exit 0   22 tests
+forge test                   exit 0   37 passed, 1 skipped
+```
+
+G1 output against live Shannon, verbatim:
+
+```
+[OK] no compiled-in address literals
+[OK] chain id                    RPC reports chain 50312
+[OK] venue addresses             read from the pinned SDK at runtime
+[OK] market discovery            36 MarketCreated log(s), 6 still live
+[OK] configured market           ETH pool=0x8EB893...B404 interval=3600s live
+[OK] reactivity available        somnia_reactivityGetSubscriptions answered
+[OK] precompile address          0x...0100, presence proven by RPC not eth_getCode
+[NOT_APPLICABLE] subscription liveness and handler funding   (P1 deploys nothing)
+G1 PASSED: 10 check(s), 0 blocked.
+```
+
+### Claims moved, and one deliberately not
+
+C-001 and C-006 moved R0 to R1, with their evidence in the same commit (§21). C-003 briefly carried
+evidence from the reactivity probe; it was removed. The probe shows the path exists **on Shannon**,
+which is a fact about the network, not about this product. C-003 claims Assize delivered samples by
+it — that is G3, and it belongs to P2.
+
+### What P1 did not establish
+
+No sample has been written by Assize, no breach recorded against a live market, no bond forfeited.
+
+### Carried into P2 as a requirement
+
+The reactivity reference warns that a handler's own logs are matched against subscriptions, so a
+subscription can feed itself and drain the owner's balance. Assize's subscriber emits
+`SampleRecorded` when it writes a sample. The P2 filter must exclude the registry's own address, and
+a test must prove it. Written down now so P2 meets it as a requirement rather than as an incident.

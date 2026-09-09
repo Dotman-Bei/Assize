@@ -18,10 +18,29 @@
     {
       "id": "C-001",
       "claim": "A breach is recorded only from a stored, block-pinned sample.",
-      "rung": "R0",
+      "rung": "R1",
       "target_rung": "R4",
       "gate": "G2",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R1",
+          "description": "The Solidity evaluator and packages/reference agree on 10,000 generated commitment and sample pairs with zero divergence, and the corpus reaches all seven verdict states. The gate also compares the breach classification, which is what decides whether a bond forfeits.",
+          "command": "pnpm test:differential",
+          "recordedAt": "2026-09-10"
+        },
+        {
+          "rung": "R1",
+          "description": "AssizeRegistry.recordSample rejects a sample that pins no block number or no block hash, and rejects an unlabelled sample. A breach is recorded only from a sample that was stored first, and every recorded breach still re-derives to a breach from storage alone.",
+          "command": "forge test --match-path contracts/test/AssizeRegistry.t.sol",
+          "recordedAt": "2026-09-10"
+        },
+        {
+          "rung": "R1",
+          "description": "Under arbitrary sequences of publish and sample calls, breaches never outnumber samples, and every forfeiture names a breach that exists and belongs to that commitment.",
+          "command": "forge test --match-path contracts/test/BondConservation.t.sol",
+          "recordedAt": "2026-09-10"
+        }
+      ],
       "verified_by": "pnpm test:differential"
     },
     {
@@ -63,10 +82,23 @@
     {
       "id": "C-006",
       "claim": "Sampling gaps are recorded as NOT_SAMPLED and are never counted as coverage.",
-      "rung": "R0",
+      "rung": "R1",
       "target_rung": "R3",
       "gate": "G6",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R1",
+          "description": "A sample id that was never written re-derives to NOT_SAMPLED rather than to any positive state, and NOT_SAMPLED is not a breach and is not coverage. The only positive state is COVERED_AT_SAMPLE.",
+          "command": "pnpm test",
+          "recordedAt": "2026-09-10"
+        },
+        {
+          "rung": "R1",
+          "description": "The differential corpus reports every verdict state on its own line, NOT_SAMPLED included, and fails if the corpus never reaches one of them. A state the corpus does not reach is a state the gate did not test.",
+          "command": "pnpm test:differential",
+          "recordedAt": "2026-09-10"
+        }
+      ],
       "verified_by": "pnpm campaign -- --report"
     },
     {

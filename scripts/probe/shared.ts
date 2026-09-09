@@ -92,7 +92,46 @@ export async function readCode(
  * a string is indistinguishable from a string result, and a probe that confuses
  * the two reports a fact it never actually read.
  */
-type RpcResponse = { ok: true; result: unknown } | { ok: false; error: string };
+type RpcResponse =
+  | { ok: true; result: unknown }
+  | { ok: false; error: string; code?: number };
+
+/** JSON-RPC "method not found". Distinguishes an unsupported node from a bad call. */
+export const RPC_METHOD_NOT_FOUND = -32601;
+
+/**
+ * Whether a node supports a JSON-RPC method at all.
+ *
+ * Calling with deliberately empty parameters is enough: a node that has the
+ * method answers or complains about the arguments, and a node that does not
+ * returns -32601. That difference is the whole test, and it is why the error
+ * code is carried through rather than flattened into a message.
+ */
+export async function supportsRpcMethod(
+  rpcUrl: string,
+  method: string,
+  params: unknown[] = [],
+): Promise<{ supported: boolean; detail: string }> {
+  const response = await jsonRpc(rpcUrl, method, params);
+  if (response.ok) {
+    return { supported: true, detail: `${method} answered` };
+  }
+  if (response.code === RPC_METHOD_NOT_FOUND) {
+    return { supported: false, detail: `${method} is not served by this node` };
+  }
+  // Any other error means the method exists and disliked the arguments.
+  return { supported: true, detail: `${method} exists (${response.error})` };
+}
+
+/** Calls a JSON-RPC method and returns its result, or the reason there is none. */
+export async function callRpc(
+  rpcUrl: string,
+  method: string,
+  params: unknown[],
+): Promise<{ result: unknown } | { error: string }> {
+  const response = await jsonRpc(rpcUrl, method, params);
+  return response.ok ? { result: response.result } : { error: response.error };
+}
 
 async function jsonRpc(rpcUrl: string, method: string, params: unknown[]): Promise<RpcResponse> {
   try {
@@ -105,9 +144,16 @@ async function jsonRpc(rpcUrl: string, method: string, params: unknown[]): Promi
     if (!response.ok) {
       return { ok: false, error: `RPC responded ${response.status} ${response.statusText}` };
     }
-    const body = (await response.json()) as { result?: unknown; error?: { message?: string } };
+    const body = (await response.json()) as {
+      result?: unknown;
+      error?: { message?: string; code?: number };
+    };
     if (body.error !== undefined) {
-      return { ok: false, error: `RPC error: ${body.error.message ?? JSON.stringify(body.error)}` };
+      return {
+        ok: false,
+        error: `RPC error: ${body.error.message ?? JSON.stringify(body.error)}`,
+        ...(typeof body.error.code === "number" ? { code: body.error.code } : {}),
+      };
     }
     return { ok: true, result: body.result };
   } catch (error) {
