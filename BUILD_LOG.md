@@ -87,3 +87,70 @@ Both recorded as D-010. No claim was raised on either.
 - **K9.** PRD §2 records the submission window as 25 Aug to 8 Sep and states it has closed. Marked
   `OWNER DECISION`. P1 is identical under either branch of K9, so it did not block this work, but
   nothing on the submission path should be built until it is answered.
+
+---
+
+## 2026-09-10 — Phase P1: closing the gap between G2 and what the registry stores
+
+**Outcome.** 37 contract tests, up from 31. No gate status changed: G2 still passes, G1 still does
+not. This work hardened what P1 already had rather than extending it, because P1's named scope was
+complete and its remaining gate is blocked on inputs this environment does not have (D-010).
+
+### The gap
+
+G2 proves `VerdictLib` agrees with `packages/reference` over 10,000 pairs, calling the library
+directly with values in memory. The registry does something G2 never exercises: it writes a sample
+into packed storage and re-derives the verdict by reading that storage back. A truncation, a
+mis-ordered field or a lost enum value in that round-trip would leave G2 green while the path that
+actually runs disagreed with the evaluator both implementations were checked against.
+
+`contracts/test/RegistryFidelity.t.sol` closes it, so the chain runs unbroken:
+
+```
+packages/reference  ==(G2)==  VerdictLib  ==(fidelity)==  what the registry stores
+```
+
+### Files changed
+
+```
+contracts/test/RegistryFidelity.t.sol    new, 5 fuzz tests
+contracts/test/BondConservation.t.sol    new, 5 invariants + a non-vacuity check
+foundry.toml                             added [invariant] runs=64 depth=128
+contracts/test/BondConservation.t.sol    one comment reworded, check:vocabulary hit "always"
+```
+
+### Commands
+
+```
+forge test                       exit 0   37 tests, 5 suites
+forge test --match-path BondConservation.t.sol
+                                 exit 0   64 runs, 8192 calls, 0 reverts
+pnpm test:differential           exit 0   G2 unchanged
+pnpm check:vocabulary            exit 1 -> exit 0 after rewording one comment
+pnpm probe:all                   exit 1   G1 unchanged, still blocked per D-010
+```
+
+### What the negative controls taught
+
+Each new test was verified to fail before being trusted. Two findings worth keeping:
+
+1. **The first corruption I injected — truncating a stored `uint128` size to `uint64` — was caught by
+   the byte-for-byte field test and passed straight through the verdict test.** Truncating a huge
+   size to another huge size rarely crosses the `minSize` boundary, so the derived verdict does not
+   move. The two tests are complementary rather than redundant: one checks the fields survive
+   storage, the other checks the derivation reads what survived.
+
+2. **A fuzz test can be discriminating on paper and vacuous in practice.** Drawing `bid` and `ask`
+   independently across the whole uint128 range means roughly half the samples cross and most of the
+   rest are wider than any committed spread, so the ladder stops at rung 2 or 6 and the depth
+   comparison is almost never reached. `testFuzz_stored_verdict_matches_the_evaluator_on_a_coherent_book`
+   builds the book from a mid and a half-spread so the envelope comparisons are actually exercised.
+   `afterInvariant()` asserts the same thing for the invariant run: a sequence that never records a
+   breach satisfies every breach invariant vacuously.
+
+### A note on the vocabulary rule
+
+`check:vocabulary` flagged "always" in a doc comment and did not flag it inside the identifier
+`invariant_forfeiture_always_names_a_real_breach`, because `_` is a word character. That is the
+word-boundary rule in D-008 behaving as specified — the same mechanism that lets `safeParse` and
+"liquidity" through — but it is worth knowing that a snake_case identifier will not be caught.
