@@ -93,14 +93,18 @@ function edgeCases(): DifferentialCase[] {
     // ABSENT outranks a spread that would also breach: no side, no spread.
     { envelope: e, sample: sample(0n, 9000n, 0n, 0n, 150n) },
 
-    // SPREAD_BREACH boundary. bps = (ask-bid)*20000/(ask+bid).
-    // 4950/5050 -> 100*20000/10000 = 200, exactly the bound, inside it.
-    { envelope: e, sample: sample(4950n, 5050n, 5000n, 5000n, 150n) },
-    // 4949/5051 -> 102*20000/10000 = 204 > 200.
-    { envelope: e, sample: sample(4949n, 5051n, 5000n, 5000n, 150n) },
-    // Floor division: 20001/10000 floors to 2, inside a bound of 2.
-    { envelope: envelope(2n, 0n, 1n, 1000n), sample: sample(9999n, 10000n, 1n, 1n, 500n) },
+    // SPREAD_BREACH boundary. The bound is absolute: spread = ask - bid (D-011).
+    // 4900/5100 -> spread exactly 200, the bound, inside it.
+    { envelope: e, sample: sample(4900n, 5100n, 5000n, 5000n, 150n) },
+    // 4899/5101 -> spread 202 > 200.
+    { envelope: e, sample: sample(4899n, 5101n, 5000n, 5000n, 150n) },
+    // A one-unit spread against a one-unit bound, and against a zero bound.
     { envelope: envelope(1n, 0n, 1n, 1000n), sample: sample(9999n, 10000n, 1n, 1n, 500n) },
+    { envelope: envelope(0n, 0n, 1n, 1000n), sample: sample(9999n, 10000n, 1n, 1n, 500n) },
+    // The same spread at a very different price level must judge the same way.
+    // Under the superseded ratio rule (D-005) these two disagreed.
+    { envelope: envelope(200n, 0n, 1n, 1000n), sample: sample(9_900n, 10_100n, 1n, 1n, 500n) },
+    { envelope: envelope(200n, 0n, 1n, 1000n), sample: sample(99_900n, 100_100n, 1n, 1n, 500n) },
     // Zero committed spread: only a locked market is inside it.
     { envelope: envelope(0n, 0n, 1n, 1000n), sample: sample(5000n, 5000n, 1n, 1n, 500n) },
     { envelope: envelope(0n, 0n, 1n, 1000n), sample: sample(4999n, 5000n, 1n, 1n, 500n) },
@@ -126,9 +130,14 @@ function edgeCases(): DifferentialCase[] {
       envelope: envelope(20000n, 0n, 0n, MAX_UINT64),
       sample: sample(1n, MAX_UINT128, 1n, 1n, MAX_UINT64),
     },
-    // Largest possible spread: bid 1, ask max. bps floors just under 20000.
+    // The widest spread the widths allow, against a bound that tolerates it and
+    // a bound that does not.
     {
-      envelope: envelope(19999n, 0n, 0n, MAX_UINT64),
+      envelope: envelope(MAX_UINT128, 0n, 0n, MAX_UINT64),
+      sample: sample(0n + 1n, MAX_UINT128, 1n, 1n, 1n),
+    },
+    {
+      envelope: envelope(MAX_UINT128 - 2n, 0n, 0n, MAX_UINT64),
       sample: sample(1n, MAX_UINT128, 1n, 1n, 1n),
     },
     { envelope: envelope(0n, 0n, 0n, 0n), sample: sample(0n, 0n, 0n, 0n, 0n, UNPINNED, "UNLABELLED") },
@@ -167,7 +176,8 @@ function randomCases(count: number, seed: number): DifferentialCase[] {
     const start = between(0n, 1_000_000n);
     const end = start + between(0n, 10_000n);
     const env = envelope(
-      pick([0n, 1n, 2n, 50n, 200n, 500n, 2000n, 19999n, 20000n, between(0n, 40000n)]),
+      // Absolute bounds, drawn to straddle the spreads the book below produces.
+      pick([0n, 1n, 2n, 50n, 200n, 500n, 2000n, 40000n, between(0n, 40000n), MAX_UINT128]),
       pick([0n, 1n, 1000n, between(0n, 100000n), MAX_UINT128]),
       start,
       end,

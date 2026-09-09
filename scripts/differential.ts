@@ -39,7 +39,7 @@ const SEED = 0x0a55_1235;
 const CASE_TUPLE = {
   type: "tuple[]",
   components: [
-    { name: "maxSpread", type: "uint32" },
+    { name: "maxSpread", type: "uint128" },
     { name: "minSize", type: "uint128" },
     { name: "start", type: "uint64" },
     { name: "end", type: "uint64" },
@@ -72,9 +72,7 @@ function main(): void {
     const state = verdict(testCase.envelope, testCase.sample);
     tally.set(state, (tally.get(state) ?? 0) + 1);
     return {
-      // viem encodes uint32 as `number`, wider ints as `bigint`. A uint32 is
-      // exactly representable as a JS number, so this conversion is lossless.
-      maxSpread: Number(testCase.envelope.maxSpread),
+      maxSpread: testCase.envelope.maxSpread,
       minSize: testCase.envelope.minSize,
       start: testCase.envelope.start,
       end: testCase.envelope.end,
@@ -126,6 +124,7 @@ function main(): void {
 
   const forge = process.env["FORGE_BIN"] ?? "forge";
   process.stdout.write(`\nreplaying the same pairs through VerdictLib (${forge})\n`);
+  let failure: string | undefined;
   try {
     const output = execFileSync(
       forge,
@@ -137,7 +136,27 @@ function main(): void {
     // AGENTS.md forbids an empty catch. Report what forge said, then fail the gate.
     const shell = error as { stdout?: string; stderr?: string; message?: string };
     process.stdout.write(shell.stdout ?? "");
-    process.stderr.write(shell.stderr ?? shell.message ?? "forge failed with no output\n");
+    failure = shell.stderr ?? shell.message ?? "forge failed with no output\n";
+  } finally {
+    // The fixtures are consumed by the run that generated them and are removed
+    // whether it passed or failed.
+    //
+    // A fixture left behind is a trap: it holds the verdicts one revision of
+    // `packages/reference` produced, and a later `forge test` would replay them
+    // against a newer VerdictLib and report a divergence that is not real. That
+    // happened twice while this gate was being built — once after the ABSENT
+    // precedence fix (D-004) and once after the spread correction (D-011) — and
+    // both times the "divergence" was only a stale expectation. Cleaning up here
+    // means the vectors exist only inside the gate that made them, and a bare
+    // `forge test` skips honestly instead of failing wrongly.
+    for (const artefact of readdirSync(FIXTURE_DIR)) {
+      if (artefact.startsWith("differential.")) {
+        rmSync(join(FIXTURE_DIR, artefact));
+      }
+    }
+  }
+  if (failure !== undefined) {
+    process.stderr.write(failure);
     process.stderr.write("\nG2 FAILED: the two evaluators diverge, or forge could not run.\n");
     process.exit(1);
   }

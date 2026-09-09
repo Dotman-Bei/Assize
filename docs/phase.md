@@ -2,8 +2,11 @@
 
 **Phase: P1. Status: in progress. G2 closed, G1 open.**
 
-Updated 2026-09-10. G2 passes. G1 does not, and the phase stays open because of it. This file is not
-marked passed on thin evidence: the reason G1 is open is written below rather than deferred.
+Updated 2026-09-10, twice. G2 passes. G1 does not, and the phase stays open because of it. This file
+is not marked passed on thin evidence: the reason G1 is open is written below rather than deferred.
+
+The second update narrowed G1's blocker considerably. `pnpm probe:dreamdex` now runs against live
+Shannon testnet and exits zero. One input is still missing, named below.
 
 ## Stop boundary
 
@@ -11,11 +14,16 @@ Nothing is deployed and nothing calls a live market until G1 and G2 pass.
 
 - **G1**, no compiled-in protocol facts: `pnpm probe:all` exits zero and the address-literal check
   finds nothing in `apps/` or `packages/`.
-  **Status: NOT PASSED.** The static half passes — `pnpm check:no-address-literals` finds nothing in
-  `apps/`, `packages/` or `contracts/src`. The live half cannot run here: the DreamDEX SDK is not
-  resolvable from the npm registry under any candidate name, and `dream-rpc.shannon.somnia.network`
-  does not resolve from this environment. `pnpm probe:all` exits 1 and names both. The probe
-  machinery itself was verified against a reachable public RPC. See DECISIONS.md D-010.
+  **Status: NOT PASSED, one blocker left.** Three of its four parts pass:
+  - static: `pnpm check:no-address-literals` finds nothing in `apps/`, `packages/`, `contracts/src`;
+  - live market metadata: `pnpm probe:dreamdex` exits zero against Shannon testnet (chain 50312 at
+    `https://dream-rpc.somnia.network`), discovering markets from `MarketCreated` logs through the
+    pinned `@somnia-chain/markets-sdk@0.29.0` and confirming a configured market id;
+  - venue addresses: read from the SDK at runtime, none compiled in.
+
+  The remaining part is `pnpm probe:reactivity`, which needs the Somnia reactivity precompile's
+  address. That address is in none of the pinned sources, and PRD §0.3 forbids inventing a
+  precompile calling convention. See DECISIONS.md D-014, which supersedes D-010.
 - **G2**, evaluator agreement: the Solidity evaluator and `packages/reference` agree on 10,000
   generated commitment and sample pairs, zero divergence.
   **Status: PASSED**, 2026-09-10. `pnpm test:differential`, seed `0xa551235`, 10,000 pairs, zero
@@ -53,10 +61,14 @@ the evidence is thin, write here why, and leave the phase open.
 
 ## What P1 needs before it closes
 
-1. Network access to Somnia Shannon, so a probe can read a live chain.
-2. The DreamDEX SDK, pinned in `skills-lock.json` by source, path and SHA-256 (AGENTS.md §0.2). The
-   market-metadata read in `scripts/probe-dreamdex.ts` is written against the pinned SDK, in the same
-   change that pins it — not from memory (PRD §0.3).
+**One thing: the Somnia reactivity reference.** The precompile's address on Shannon and its `onEvent`
+handler convention. It is the fourth item in AGENTS.md §0.2's pinning list and the only one not
+supplied. With it, `probe:reactivity` completes, G1 closes, and P2 can begin. See D-014.
 
-Until both exist, G1 cannot pass and P2 cannot begin. Separately, K9 (`OWNER DECISION`) governs
-whether the submission path continues at all; P1 is identical under either branch.
+If it turns out the reactivity precompile is genuinely unavailable rather than merely undocumented,
+PRD §26 K1 governs: switch to Path K, label every sample `KEEPER`, and delete every claim about
+validator-delivered measurement. K1 is not fired today — the markets do emit subscribable events
+(D-012), so the capability exists; only the document is missing.
+
+Separately, K9 (`OWNER DECISION`) governs whether the submission path continues at all; P1 is
+identical under either branch.

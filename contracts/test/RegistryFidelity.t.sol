@@ -36,7 +36,7 @@ contract RegistryFidelityTest is Test {
     /// evaluator reads every field of both structures, so a test that names them
     /// all individually exhausts the stack before it can call anything.
     struct FuzzInput {
-        uint32 maxSpread;
+        uint128 maxSpread;
         uint128 minSize;
         uint64 start;
         uint64 windowLength;
@@ -153,9 +153,9 @@ contract RegistryFidelityTest is Test {
         uint128 largerSide = bidSize > askSize ? bidSize : askSize;
 
         CommitmentEnvelope memory envelope = CommitmentEnvelope({
-            // The full basis-point range a two-sided book can produce, so the
-            // committed bound straddles the sample's actual spread.
-            maxSpread: uint32(bound(input.maxSpread, 0, 20_000)),
+            // Bound around the sample's own spread, so the committed bound
+            // straddles it and the comparison is actually exercised.
+            maxSpread: uint128(bound(input.maxSpread, 0, uint256(halfSpread) * 2 + 2)),
             minSize: uint128(bound(input.minSize, 0, largerSide + 1)),
             start: 1,
             end: 1_000_000
@@ -233,7 +233,7 @@ contract RegistryFidelityTest is Test {
 
     /// @notice The stored envelope is the one that was published.
     function testFuzz_stored_envelope_is_what_was_published(
-        uint32 maxSpread,
+        uint128 maxSpread,
         uint128 minSize,
         uint64 start,
         uint64 windowLength

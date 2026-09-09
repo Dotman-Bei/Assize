@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@somnia-chain/markets-sdk':
+        specifier: 0.29.0
+        version: 0.29.0(graphql@17.0.2)(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
     devDependencies:
       '@assize/protocol-types':
         specifier: workspace:*
@@ -354,6 +358,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@graphql-typed-document-node/core@3.2.0':
+    resolution: {integrity: sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
@@ -509,6 +518,18 @@ packages:
   '@scure/bip39@1.6.0':
     resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
 
+  '@somnia-chain/markets-sdk@0.29.0':
+    resolution: {integrity: sha512-8qEtXIBh8/mdn/L6NGOZKRMyPxyATL/Rl6/TSQ2mZSJCVT5zGC4TwsRZnKTBlSgakQdAoeLCTdZdilcSaluUZg==}
+    peerDependencies:
+      '@somnia-chain/reactivity': ^0.2.1
+      react: '>=18'
+      viem: ^2
+    peerDependenciesMeta:
+      '@somnia-chain/reactivity':
+        optional: true
+      react:
+        optional: true
+
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
@@ -611,6 +632,10 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  graphql@17.0.2:
+    resolution: {integrity: sha512-FRWbddMxfkjiB7z+aQDWIR+E34xo9I8c9mtK2RPv8PmMzKRvrdsreHL/Ui/TmwHJfhHChEtsFPyMHKI+xuarQQ==}
+    engines: {node: ^22.0.0 || ^24.0.0 || ^25.0.0 || >=26.0.0}
 
   isows@1.0.7:
     resolution: {integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==}
@@ -942,6 +967,10 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
+  '@graphql-typed-document-node/core@3.2.0(graphql@17.0.2)':
+    dependencies:
+      graphql: 17.0.2
+
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
@@ -1042,6 +1071,13 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
+
+  '@somnia-chain/markets-sdk@0.29.0(graphql@17.0.2)(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))':
+    dependencies:
+      '@graphql-typed-document-node/core': 3.2.0(graphql@17.0.2)
+      viem: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - graphql
 
   '@types/estree@1.0.9': {}
 
@@ -1181,6 +1217,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  graphql@17.0.2: {}
 
   isows@1.0.7(ws@8.21.0):
     dependencies:

@@ -41,7 +41,7 @@ contract AssizeRegistry {
     struct Commitment {
         address maker;
         bytes32 marketId;
-        uint32 maxSpread;
+        uint128 maxSpread;
         uint128 minSize;
         uint64 start;
         uint64 end;
@@ -100,7 +100,7 @@ contract AssizeRegistry {
         uint256 indexed commitmentId,
         address indexed maker,
         bytes32 indexed marketId,
-        uint32 maxSpread,
+        uint128 maxSpread,
         uint128 minSize,
         uint64 start,
         uint64 end,
@@ -199,7 +199,7 @@ contract AssizeRegistry {
     /// leave the bond exposed to nothing at all while still calling itself a bond.
     function publishCommitment(
         bytes32 marketId,
-        uint32 maxSpread,
+        uint128 maxSpread,
         uint128 minSize,
         uint64 start,
         uint64 end

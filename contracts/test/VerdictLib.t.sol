@@ -11,7 +11,7 @@ import {
 contract VerdictLibTest is Test {
     bytes32 internal constant PIN = bytes32(uint256(0xabcd));
 
-    function _envelope(uint32 maxSpread, uint128 minSize, uint64 start, uint64 end)
+    function _envelope(uint128 maxSpread, uint128 minSize, uint64 start, uint64 end)
         internal
         pure
         returns (CommitmentEnvelope memory)
@@ -24,7 +24,7 @@ contract VerdictLibTest is Test {
     /// outside it cannot be constructed on chain, because the ABI decoder rejects
     /// it before any of this runs.
     function testFuzz_verdict_is_total(
-        uint32 maxSpread,
+        uint128 maxSpread,
         uint128 minSize,
         uint64 start,
         uint64 end,
@@ -74,7 +74,7 @@ contract VerdictLibTest is Test {
             source: SampleSource.REACTIVITY
         });
         VerdictState state =
-            VerdictLib.verdict(_envelope(type(uint32).max, 0, 0, type(uint64).max), sample);
+            VerdictLib.verdict(_envelope(type(uint128).max, 0, 0, type(uint64).max), sample);
         assertEq(uint256(state), uint256(VerdictState.SAMPLER_FAILED));
     }
 
@@ -89,7 +89,7 @@ contract VerdictLibTest is Test {
     {
         vm.assume(quoted > 0);
         vm.assume(blockNumber > 0);
-        CommitmentEnvelope memory envelope = _envelope(type(uint32).max, 0, 0, type(uint64).max);
+        CommitmentEnvelope memory envelope = _envelope(type(uint128).max, 0, 0, type(uint64).max);
 
         Sample memory askPulled = Sample({
             bid: quoted,
@@ -126,7 +126,7 @@ contract VerdictLibTest is Test {
             source: SampleSource.REACTIVITY
         });
         VerdictState state =
-            VerdictLib.verdict(_envelope(type(uint32).max, 0, 0, type(uint64).max), sample);
+            VerdictLib.verdict(_envelope(type(uint128).max, 0, 0, type(uint64).max), sample);
         assertEq(uint256(state), uint256(VerdictState.ABSENT));
     }
 
@@ -146,24 +146,55 @@ contract VerdictLibTest is Test {
         assertEq(uint256(state), uint256(VerdictState.SAMPLER_FAILED));
     }
 
-    /// @notice The committed bound is inclusive, and the arithmetic does not
-    /// overflow at the top of the uint128 range.
-    function test_spread_bound_is_inclusive() public pure {
+    /// @notice The committed bound is absolute and inclusive, and the
+    /// subtraction does not overflow at the top of the uint128 range.
+    /// @dev DECISIONS.md D-011. `frontend.md` §3.2 renders a 0.0160 spread as
+    /// 160 bps and §3.7 renders 0.0650 as 650 bps, both of which are basis
+    /// points of one whole contract rather than of mid.
+    function test_spread_bound_is_absolute_and_inclusive() public pure {
         CommitmentEnvelope memory envelope = _envelope(200, 0, 0, type(uint64).max);
-        Sample memory atBound = Sample({
-            bid: 4950,
-            ask: 5050,
+
+        Sample memory atBound = _priced(4900, 5100); // spread exactly 200
+        assertEq(
+            uint256(VerdictLib.verdict(envelope, atBound)),
+            uint256(VerdictState.COVERED_AT_SAMPLE),
+            "a spread equal to the bound is inside the envelope"
+        );
+
+        Sample memory overBound = _priced(4899, 5101); // spread 202
+        assertEq(
+            uint256(VerdictLib.verdict(envelope, overBound)), uint256(VerdictState.SPREAD_BREACH)
+        );
+
+        assertEq(VerdictLib.absoluteSpread(4900, 5100), 200);
+        assertEq(VerdictLib.absoluteSpread(5000, 5000), 0);
+        // The widest spread the widths allow, with no overflow.
+        assertEq(VerdictLib.absoluteSpread(0, type(uint128).max), uint256(type(uint128).max));
+    }
+
+    /// @notice The bound is absolute, so the same spread is judged the same way
+    /// wherever it sits in the price range.
+    /// @dev Under the superseded ratio-of-mid rule (D-005) these two disagreed:
+    /// the same 200-unit spread measured 400 bps at a mid of 10000 and 40 bps at
+    /// a mid of 100000. `frontend.md` measures absolutely, so they must agree.
+    function test_the_same_spread_is_judged_the_same_at_any_price() public pure {
+        CommitmentEnvelope memory envelope = _envelope(200, 0, 0, type(uint64).max);
+        assertEq(
+            uint256(VerdictLib.verdict(envelope, _priced(9_900, 10_100))),
+            uint256(VerdictLib.verdict(envelope, _priced(99_900, 100_100)))
+        );
+    }
+
+    function _priced(uint128 bid, uint128 ask) private pure returns (Sample memory) {
+        return Sample({
+            bid: bid,
+            ask: ask,
             bidSize: 1,
             askSize: 1,
             blockNumber: 1,
             blockHash: PIN,
             source: SampleSource.REACTIVITY
         });
-        assertEq(uint256(VerdictLib.verdict(envelope, atBound)), uint256(VerdictState.COVERED_AT_SAMPLE));
-        assertEq(VerdictLib.spreadBps(4950, 5050), 200);
-
-        // Widest measurable spread, at the widths' extremes.
-        assertEq(VerdictLib.spreadBps(1, type(uint128).max), 19_999);
     }
 
     /// @notice Only three states forfeit a bond (PRD §26 K6: never record a

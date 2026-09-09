@@ -20,3 +20,7 @@ internal/
 # divergence that is not real. `pnpm test:differential` regenerates them on
 # every run, which is why the gate is that command and not `forge test`.
 contracts/test/fixtures/differential.*
+
+# Pinned upstream, fetched by `pnpm skills:install`, verified against
+# skills-lock.json. The lock is committed; the content is not ours to vendor.
+.skills/

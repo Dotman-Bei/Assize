@@ -13,7 +13,7 @@ import {
 /// match `CASE_TUPLE` in that file; `abi.decode` is positional.
 contract DifferentialTest is Test {
     struct Case {
-        uint32 maxSpread;
+        uint128 maxSpread;
         uint128 minSize;
         uint64 start;
         uint64 end;

@@ -137,9 +137,11 @@ export interface StoredSample {
  * The verdict-relevant half of a commitment (PRD §10
  * `publishCommitment(marketId, maxSpread, minSize, start, end)`).
  *
- * `maxSpread` is in basis points of mid. `minSize` is in the book's own size
- * units and applies to each side independently. `start` and `end` are block
- * numbers, inclusive at both ends (DECISIONS.md D-003).
+ * `maxSpread` is the widest tolerated `ask - bid`, in the book's own raw price
+ * units — an absolute bound, not a ratio (DECISIONS.md D-011, superseding D-005).
+ * `minSize` is in the book's own size units and applies to each side
+ * independently. `start` and `end` are block numbers, inclusive at both ends
+ * (DECISIONS.md D-003).
  *
  * The maker, the bond and the market id are stored on the commitment but are not
  * inputs to the verdict: PRD §12 requires the verdict be computed from stored

@@ -67,7 +67,7 @@ export const writableSampleSchema = storedSampleSchema.extend({
 
 export const commitmentEnvelopeSchema = z
   .object({
-    maxSpread: uint32("maxSpread"),
+    maxSpread: uint128("maxSpread"),
     minSize: uint128("minSize"),
     start: uint64("start"),
     end: uint64("end"),

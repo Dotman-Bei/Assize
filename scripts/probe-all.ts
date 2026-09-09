@@ -61,9 +61,15 @@ async function main(): Promise<void> {
     `\nG1 ${ok ? "PASSED" : "NOT PASSED"}: ${results.length} check(s), ${blocked.length} blocked.\n`,
   );
   if (!ok) {
+    // Name what is actually blocked. "The live half has not run" stopped being
+    // true once probe:dreamdex started reading Shannon, and a summary that
+    // overstates a blocker is the same defect as one that hides it.
+    for (const result of blocked) {
+      process.stdout.write(`  blocked: ${result.check} — ${result.detail}\n`);
+    }
     process.stdout.write(
-      "G1 is not satisfied by the static half alone. Until the live half runs, no claim may\n"
-        + "state that protocol facts are read from a live source (PRD §21, §26).\n",
+      "\nWhile any check above is blocked, no claim may state that the corresponding protocol\n"
+        + "fact is read from a live source (PRD §21, §26).\n",
     );
   }
   process.exit(ok ? 0 : 1);

@@ -1,0 +1,64 @@
+{
+  "$comment": [
+    "AGENTS.md and PRD.md §0.2: the official documentation is installed as pinned skills, by",
+    "source, path and SHA-256. Nothing in this repository is written from memory about any of",
+    "them (§0.3). When a pin no longer matches, upstream changed: re-inspect, record the",
+    "discrepancy in DECISIONS.md, and adapt while preserving the thesis in PRD §4.",
+    "Verify with `pnpm skills:verify`. Fetch with `pnpm skills:install`."
+  ],
+  "pinnedAt": "2026-09-10",
+  "network": "somnia-shannon-testnet",
+  "skills": [
+    {
+      "id": "dreamdex-event-contracts-docs",
+      "what": "DreamDEX developer documentation, Event Contracts section",
+      "source": "https://docs.dreamdex.io/developers/event-contracts",
+      "kind": "http",
+      "path": ".skills/dreamdex-event-contracts-docs.html",
+      "sha256": "cb018b156e8bc304cc6bdecb88aa77745eacfc0494c9d21478788c18415062b2",
+      "bytes": 717841
+    },
+    {
+      "id": "dreamdex-bot-kit",
+      "what": "DreamDEX Bot Kit. PRD §8.3: the baseline maker's lineage.",
+      "source": "https://github.com/somnia-chain/dreamdex-bot-kit",
+      "kind": "git",
+      "path": ".skills/dreamdex-bot-kit",
+      "commit": "b55fa0a51069faba58e161f3e26b049343aa9aaf",
+      "committedAt": "2026-09-08T15:26:04+03:00"
+    },
+    {
+      "id": "ec-dreamdex-hackathon-template",
+      "what": "Hackathon starter template. PRD §8.3: the app base. Carries solidity/src/IEventContracts.sol, the on-chain interface for a binary pool.",
+      "source": "https://github.com/IronicDeGawd/ec-dreamdex-hackathon-template",
+      "kind": "git",
+      "path": ".skills/ec-dreamdex-hackathon-template",
+      "commit": "a325142e20b4fb4afcb5ce7374ce023ec5ae7f51",
+      "committedAt": "2026-08-28T13:02:25+05:30",
+      "files": [
+        {
+          "path": "solidity/src/IEventContracts.sol",
+          "sha256": "c5f4fb6d1336d93b7004ef96a01f2d3740509543fae95dc6bbf97f42fdcec7e5",
+          "why": "The book read, the price scale and the pool interface are taken from this file. Assize samples getBookLevels, so a change here changes what a sample is."
+        }
+      ]
+    },
+    {
+      "id": "somnia-markets-sdk",
+      "what": "@somnia-chain/markets-sdk. PRD §8.3: book and trade streams into the web surface, and live market metadata for the probes. PRD §0.4 prefers its methods over hand-rolled contract calls.",
+      "source": "https://registry.npmjs.org/@somnia-chain/markets-sdk",
+      "kind": "npm",
+      "package": "@somnia-chain/markets-sdk",
+      "version": "0.29.0",
+      "integrity": "sha512-8qEtXIBh8/mdn/L6NGOZKRMyPxyATL/Rl6/TSQ2mZSJCVT5zGC4TwsRZnKTBlSgakQdAoeLCTdZdilcSaluUZg==",
+      "shasum": "9f0558456b689f455ecebf1c8e25a251ba7dfd42"
+    }
+  ],
+  "$notes": [
+    "The Somnia reactivity reference named in PRD §0.2 is NOT pinned here. The SDK ships",
+    "spotStopRegistryEventsAbi and spotStopRegistryWriteAbi, which are the spot stop-order",
+    "registry DECISIONS.md D-001 cites as the pattern Path R copies, but the precompile's own",
+    "calling convention is not in any source inspected so far. CoverageSubscriber is Phase P2",
+    "and is written against that reference in the same change that pins it (§0.3)."
+  ]
+}

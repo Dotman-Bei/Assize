@@ -20,7 +20,8 @@
     "probe:dreamdex": "tsx scripts/probe-dreamdex.ts",
     "probe:reactivity": "tsx scripts/probe-reactivity.ts",
     "probe:all": "tsx scripts/probe-all.ts",
-    "lint:contracts": "forge lint contracts/src"
+    "lint:contracts": "forge lint contracts/src",
+    "skills:verify": "tsx scripts/skills-verify.ts"
   },
   "devDependencies": {
     "@assize/protocol-types": "workspace:*",
@@ -31,5 +32,8 @@
     "viem": "^2.21.55",
     "vitest": "^2.1.8",
     "zod": "^3.24.1"
+  },
+  "dependencies": {
+    "@somnia-chain/markets-sdk": "0.29.0"
   }
 }

@@ -46,10 +46,12 @@ struct Sample {
 }
 
 /// @notice The verdict-relevant half of a commitment (PRD §10).
-/// @dev `maxSpread` is basis points of mid; `minSize` is in the book's size units
-/// and applies to each side; `start` and `end` are block numbers, inclusive.
+/// @dev `maxSpread` is the widest tolerated `ask - bid`, in the book's own raw
+/// price units — an absolute bound, not a ratio (DECISIONS.md D-011). `minSize`
+/// is in the book's size units and applies to each side; `start` and `end` are
+/// block numbers, inclusive.
 struct CommitmentEnvelope {
-    uint32 maxSpread;
+    uint128 maxSpread;
     uint128 minSize;
     uint64 start;
     uint64 end;
@@ -62,20 +64,20 @@ struct CommitmentEnvelope {
 /// Neither is the authority; agreement between them is. Any edit here without the
 /// matching edit there is caught by `pnpm test:differential`.
 library VerdictLib {
-    /// @dev Basis points per unit, doubled, because mid is `(ask + bid) / 2`.
-    uint256 internal constant BPS_NUMERATOR = 20_000;
-
-    /// @notice Spread in basis points of mid, floored.
-    /// @dev bps = (ask - bid) * 20000 / (ask + bid).
-    /// Precondition: `0 < bid <= ask`, established by evaluating ABSENT and the
+    /// @notice The spread of a sample, in the book's own raw price units.
+    /// @dev DECISIONS.md D-011: the committed bound is absolute rather than a
+    /// ratio of mid. Both the sample's prices and the commitment's `maxSpread`
+    /// are raw integers from the same book, so the comparison needs no scale
+    /// factor and no tick size — which is what keeps PRD §17 satisfied.
+    /// Rendering this in basis points for a reader needs the market's
+    /// `oneCollateral`, which is not stored on a sample; that conversion is
+    /// therefore done off chain, outside the evaluator (see `spreadBps` in
+    /// packages/reference).
+    /// Precondition: `bid <= ask`, established by evaluating ABSENT and the
     /// crossed-book test first in {verdict}. That ordering is what keeps the
-    /// subtraction from underflowing and the denominator from being zero.
-    /// Widths: both operands are uint128, so `(ask - bid) * 20000 < 2**143` and the
-    /// uint256 multiplication cannot overflow.
-    function spreadBps(uint128 bid, uint128 ask) internal pure returns (uint256) {
-        uint256 bid256 = uint256(bid);
-        uint256 ask256 = uint256(ask);
-        return ((ask256 - bid256) * BPS_NUMERATOR) / (ask256 + bid256);
+    /// subtraction from underflowing.
+    function absoluteSpread(uint128 bid, uint128 ask) internal pure returns (uint256) {
+        return uint256(ask) - uint256(bid);
     }
 
     /// @notice PRD §5.2: verdict(commitment, sample). Reads a stored envelope and a
@@ -129,9 +131,10 @@ library VerdictLib {
             return VerdictState.SAMPLER_FAILED;
         }
 
-        // 5. SPREAD_BREACH. The committed bound is inclusive: a spread exactly
-        //    equal to `maxSpread` is inside the envelope.
-        if (spreadBps(sample.bid, sample.ask) > uint256(envelope.maxSpread)) {
+        // 5. SPREAD_BREACH. The committed bound is absolute, in the book's own
+        //    price units, and inclusive: a spread exactly equal to `maxSpread`
+        //    is inside the envelope (D-011).
+        if (absoluteSpread(sample.bid, sample.ask) > uint256(envelope.maxSpread)) {
             return VerdictState.SPREAD_BREACH;
         }
 

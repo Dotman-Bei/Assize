@@ -154,3 +154,79 @@ Each new test was verified to fail before being trusted. Two findings worth keep
 `invariant_forfeiture_always_names_a_real_breach`, because `_` is a word character. That is the
 word-boundary rule in D-008 behaving as specified — the same mechanism that lets `safeParse` and
 "liquidity" through — but it is worth knowing that a snake_case identifier will not be caught.
+
+---
+
+## 2026-09-10 — Upstream arrives: pinning, one correction, and G1 down to a single blocker
+
+**Outcome.** `pnpm probe:dreamdex` exits zero against live Shannon testnet. G1's blocker is now one
+missing document rather than two missing capabilities. G2 still passes. Phase P1 stays open.
+
+The owner supplied the Bot Kit, the Event Contracts docs and the starter template. All are pinned in
+`skills-lock.json`, together with `@somnia-chain/markets-sdk@0.29.0` — the real SDK. Every earlier
+search failed because the name was guessed as `@dreamdex/*`. Guessing a package name turned out to be
+the same error as guessing an ABI, and it produced the same result: a confident, wrong answer that
+looked like evidence of absence. D-010 recorded that absence as a blocker; D-014 supersedes it.
+
+### The correction
+
+`frontend.md` gives two worked spread examples, and D-005's ratio-of-mid formula contradicts both:
+
+| `frontend.md` | ask − bid | says | bps of mid | bps of one contract |
+|---|---|---|---|---|
+| §3.2 `0.4920 / 0.5080` | 0.0160 | 160 bps | 320 | **160** |
+| §3.7 `0.4700 / 0.5350` | 0.0650 | 650 bps | 1293 | **650** |
+
+Spread is an absolute bound, not a ratio. Pinned `IEventContracts.sol` corroborates the scale: price
+is "probability in 1e6 units", `oneCollateral` is "1e6 on testnet — one whole contract". Both
+evaluators changed, `maxSpread` widened `uint32 -> uint128`, and a display-only `spreadBps(bid, ask,
+priceScale)` now reproduces both numbers in the table under test. D-011 supersedes D-005.
+
+### What upstream settled
+
+- **K1 does not fire.** The book emits `OrderPlaced`, `OrderFilled`, `OrderRested`, `OrderCancelled`
+  and more. There is an event to subscribe to.
+- **K3 does not fire.** `OrderFilled` carries only order ids, but `OrderPlaced` carries
+  `placedOrder.owner`, so per-address attribution is possible by correlating the two.
+- **The book read is `getBookLevels(bool isBid, uint64 numLevels)`** returning `{price, quantity}`.
+  The template flags that struct as the one to confirm; the SDK's own `BookLevel` has the same two
+  fields in the same order, so two pinned sources agree.
+- **Somnia caps `eth_getLogs` at 1000 blocks.** Not guessable. Discovery now walks backwards in
+  windows and counts failed ones rather than swallowing them.
+
+### Commands
+
+```
+pnpm skills:verify                       exit 0   4 pinned, 0 mismatched
+pnpm probe:dreamdex   (live Shannon)     exit 0   chain 50312, 38 markets, 6 live
+pnpm probe:reactivity                    exit 1   BLOCKED, precompile address unknown
+pnpm probe:all        (G1)               exit 1   G1 still open
+pnpm test:differential (G2)              exit 0   10,000 pairs, zero divergence
+pnpm test                                exit 0   22 tests
+forge test                               exit 0   37 passed, 1 skipped
+```
+
+Live probe output, verbatim:
+
+```
+[OK] chain id            RPC reports chain 50312
+[OK] venue addresses     read from the pinned SDK at runtime
+[OK] market discovery    38 MarketCreated log(s) across 40000 blocks, 6 still live
+[OK] configured market   BTC pool=0x0957C6...8517 expiry=1788998400 interval=3600s live
+```
+
+### A trap closed for good
+
+The stale-fixture hazard bit twice — once after the ABSENT precedence fix, once after the spread
+correction. Both times a bare `forge test` reported a "divergence" that was only an old expectation
+replayed against new code. `pnpm test:differential` now deletes its vectors in a `finally`, so they
+exist only inside the run that made them and `forge test` skips honestly.
+
+### Still open
+
+- **G1**: the Somnia reactivity reference — the precompile address on Shannon and its `onEvent`
+  convention. The one item in AGENTS.md §0.2's pinning list not supplied. D-014.
+- **D-013** (`OWNER DECISION`): `frontend.md` §3.7 specifies a copyable verification command using
+  `dream-rpc.shannon.somnia.network`, which does not resolve. The working endpoint is
+  `dream-rpc.somnia.network`. Not edited — the design authority is not ours to change.
+- **K9** (`OWNER DECISION`): the submission window.

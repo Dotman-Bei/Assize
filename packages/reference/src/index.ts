@@ -16,33 +16,44 @@ import type {
   StoredSample,
   VerdictState,
 } from "@assize/protocol-types";
-import {
-  MAX_UINT32,
-  MAX_UINT64,
-  MAX_UINT128,
-  ZERO_BLOCK_HASH,
-} from "@assize/protocol-types";
+import { MAX_UINT64, MAX_UINT128, ZERO_BLOCK_HASH } from "@assize/protocol-types";
 
-/** Basis points per unit, doubled, because mid is `(ask + bid) / 2` (D-005). */
-const BPS_NUMERATOR = 20_000n;
+/** Basis points per whole unit of probability. Display only — see {@link spreadBps}. */
+const BPS_PER_UNIT = 10_000n;
 
 /**
- * Spread of a sample in basis points of mid, floored.
+ * The spread of a sample, in the book's own raw price units.
  *
- * §5.3 of DECISIONS.md D-005: the test is a ratio, so it is invariant to the
- * book's price scale. That is what lets Assize measure spread without compiling
- * in a tick size, which PRD §17 forbids.
+ * DECISIONS.md D-011: the committed bound is absolute, not a ratio of mid. Both
+ * the sample's prices and the commitment's `maxSpread` are raw integers from the
+ * same book, so the comparison needs no scale factor and no tick size, which is
+ * what keeps PRD §17 satisfied.
  *
- *   bps = (ask - bid) / ((ask + bid) / 2) * 10000
- *       = (ask - bid) * 20000 / (ask + bid)
- *
- * Precondition: `0 < bid <= ask`. The caller guarantees this by evaluating
- * ABSENT and the crossed-book test first (see {@link verdict}); that ordering is
- * what keeps the denominator away from zero and the subtraction from underflowing
- * in the Solidity mirror.
+ * Precondition: `bid <= ask`. The caller establishes this by evaluating ABSENT
+ * and the crossed-book test first (see {@link verdict}); that ordering is what
+ * keeps the subtraction from underflowing in the Solidity mirror.
  */
-export function spreadBps(bid: bigint, ask: bigint): bigint {
-  return ((ask - bid) * BPS_NUMERATOR) / (ask + bid);
+export function absoluteSpread(bid: bigint, ask: bigint): bigint {
+  return ask - bid;
+}
+
+/**
+ * The same spread rendered in basis points of one whole contract, for display.
+ *
+ * NOT an input to any verdict. `priceScale` is the market's `oneCollateral` —
+ * the raw value of one whole contract, read from the pool at runtime and never
+ * compiled in (PRD §17). The verdict is computed from stored data alone
+ * (PRD §5.2), and this needs a value that is not stored on the sample, which is
+ * exactly why it lives outside the evaluator.
+ *
+ * `frontend.md` §3.2 and §3.7 both render spread this way: a 0.0160 spread reads
+ * as 160 bps, and a 0.0650 spread as 650 bps.
+ */
+export function spreadBps(bid: bigint, ask: bigint, priceScale: bigint): bigint {
+  if (priceScale <= 0n) {
+    throw new RangeError("priceScale must be positive: it is the value of one whole contract");
+  }
+  return (absoluteSpread(bid, ask) * BPS_PER_UNIT) / priceScale;
 }
 
 /**
@@ -70,7 +81,7 @@ export function isSampleInDomain(sample: StoredSample): boolean {
 export function isEnvelopeInDomain(envelope: CommitmentEnvelope): boolean {
   return (
     envelope.maxSpread >= 0n &&
-    envelope.maxSpread <= MAX_UINT32 &&
+    envelope.maxSpread <= MAX_UINT128 &&
     envelope.minSize >= 0n &&
     envelope.minSize <= MAX_UINT128 &&
     envelope.start >= 0n &&
@@ -91,7 +102,7 @@ export function isEnvelopeInDomain(envelope: CommitmentEnvelope): boolean {
  *   3 WINDOW_CLOSED      the reading is outside the committed window
  *   4 ABSENT             there is no two-sided quote to measure
  *   5 SAMPLER_FAILED     both sides quoted, but crossed: our reading is wrong
- *   6 SPREAD_BREACH      the quote is wider than committed
+ *   6 SPREAD_BREACH      ask - bid exceeds the committed absolute bound
  *   7 DEPTH_BREACH       the quote is thinner than committed
  *   8 COVERED_AT_SAMPLE  the envelope held at this instant, and nothing more
  *
@@ -156,9 +167,11 @@ export function verdict(
     return "SAMPLER_FAILED";
   }
 
-  // 5. SPREAD_BREACH. Committed bound is inclusive: a spread exactly equal to
-  //    `maxSpread` is within the envelope.
-  if (spreadBps(sample.bid, sample.ask) > envelope.maxSpread) {
+  // 5. SPREAD_BREACH. The committed bound is absolute, in the book's own price
+  //    units, and inclusive: a spread exactly equal to `maxSpread` is within the
+  //    envelope (D-011). Comparing raw integers from the same book needs no
+  //    scale factor, so no tick size is read here (PRD §17).
+  if (absoluteSpread(sample.bid, sample.ask) > envelope.maxSpread) {
     return "SPREAD_BREACH";
   }
 

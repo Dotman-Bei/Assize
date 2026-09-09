@@ -28,7 +28,7 @@ contract RegistryHandler is Test {
         }
     }
 
-    function publish(uint256 makerSeed, uint256 marketSeed, uint96 bond, uint32 maxSpread, uint128 minSize, uint64 windowLength)
+    function publish(uint256 makerSeed, uint256 marketSeed, uint96 bond, uint128 maxSpread, uint128 minSize, uint64 windowLength)
         external
     {
         address maker = makers[bound(makerSeed, 0, makers.length - 1)];

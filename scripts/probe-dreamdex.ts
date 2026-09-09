@@ -4,15 +4,24 @@
  * Reads live DreamDEX market metadata rather than trusting a compiled-in value.
  * PRD §0.4 requires the official SDK over a hand-rolled contract call, and
  * PRD §0.3 forbids inventing an event signature, a struct layout, an ABI or a
- * field name. So this probe resolves the SDK from configuration and reports what
- * it finds; where the SDK is not available it reports BLOCKED and stops, because
- * the alternative is guessing at an interface, which is the failure this whole
- * rule exists to prevent.
+ * field name — so every name used here was read from the SDK and the starter
+ * template pinned in `skills-lock.json`, at the versions recorded there.
+ *
+ * PRD §17: no market id and no address is compiled in. The venue's addresses
+ * come from the SDK's `SOMNIA_TESTNET_ADDRESSES` at runtime, and which market to
+ * cover is `DREAMDEX_MARKET_ID` in the environment.
  */
 
 import { pathToFileURL } from "node:url";
 
+import { SOMNIA_TESTNET_ADDRESSES } from "@somnia-chain/markets-sdk";
+import { createPublicClient, http, type AbiEvent } from "viem";
+
+import { GET_LOGS_MAX_SPAN, loadMarketCreatorEventsAbi, type MarketCreatedArgs } from "./probe/dreamdex-sdk.js";
 import { passed, printResults, readChainId, requireEnv, type ProbeResult } from "./probe/shared.js";
+
+/** How far back to scan for live markets, in 1000-block windows. */
+const SCAN_WINDOWS = 40;
 
 export async function probeDreamdex(): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
@@ -57,49 +66,128 @@ export async function probeDreamdex(): Promise<ProbeResult[]> {
     detail: `RPC reports chain ${chain.chainId}`,
   });
 
-  if (sdkPackage === undefined) {
-    results.push({
-      check: "dreamdex sdk",
-      status: "BLOCKED",
-      detail:
-        "DREAMDEX_SDK_PACKAGE is not set, so there is no SDK to read market metadata with. "
-        + "PRD §0.2 requires the SDK be pinned in skills-lock.json by source, path and SHA-256 "
-        + "before it is used.",
-    });
-    return results;
-  }
-
-  // Resolved by name from configuration rather than imported by a literal, so
-  // that no package name is compiled in either.
-  let sdk: Record<string, unknown>;
-  try {
-    sdk = (await import(sdkPackage)) as Record<string, unknown>;
-  } catch (error) {
-    results.push({
-      check: "dreamdex sdk",
-      status: "BLOCKED",
-      detail: `cannot resolve "${sdkPackage}": ${(error as Error).message}`,
-    });
-    return results;
-  }
-
-  const exported = Object.keys(sdk).sort();
+  // PRD §17: addresses arrive from the SDK at runtime, never as a literal here.
+  const venue = SOMNIA_TESTNET_ADDRESSES;
   results.push({
-    check: "dreamdex sdk",
+    check: "venue addresses",
     status: "OK",
-    detail: `resolved "${sdkPackage}", ${exported.length} export(s): ${exported.slice(0, 12).join(", ")}`,
+    detail:
+      `read from the pinned SDK at runtime: marketCreator, binaryModule, collateral `
+      + `and ${Object.keys(venue).length - 3} more`,
   });
 
-  // The market-metadata read is deliberately not written yet. Writing it means
-  // choosing a method name, an argument shape and a return field, and PRD §0.3
-  // forbids choosing any of those from memory. It is written against the pinned
-  // SDK, in the same change that pins it.
+  let marketCreatedEvent: AbiEvent;
+  try {
+    const abi = await loadMarketCreatorEventsAbi();
+    const found = (abi as AbiEvent[]).find((entry) => entry.name === "MarketCreated");
+    if (found === undefined) {
+      throw new Error("MarketCreated is absent from the pinned marketCreatorEventsAbi");
+    }
+    marketCreatedEvent = found;
+  } catch (error) {
+    results.push({
+      check: "market discovery",
+      status: "PROTOCOL_CONFIG_CHANGED",
+      detail: `${(error as Error).message}. Upstream moved; re-inspect and record it (AGENTS.md).`,
+    });
+    return results;
+  }
+
+  const client = createPublicClient({ transport: http(rpcUrl) });
+  let head: bigint;
+  try {
+    head = await client.getBlockNumber();
+  } catch (error) {
+    results.push({ check: "market discovery", status: "BLOCKED", detail: (error as Error).message });
+    return results;
+  }
+
+  // Somnia caps eth_getLogs at 1000 blocks per call, so the scan walks backwards
+  // in windows. A window that fails is counted rather than swallowed: a scan
+  // that silently lost half its range would under-report live markets, and
+  // "no markets found" and "we could not look" are different answers.
+  const markets: MarketCreatedArgs[] = [];
+  let failedWindows = 0;
+  for (let index = 0; index < SCAN_WINDOWS; index += 1) {
+    const toBlock = head - BigInt(index) * GET_LOGS_MAX_SPAN;
+    if (toBlock <= 0n) {
+      break;
+    }
+    const fromBlock = toBlock > GET_LOGS_MAX_SPAN ? toBlock - (GET_LOGS_MAX_SPAN - 1n) : 0n;
+    try {
+      const logs = await client.getLogs({ event: marketCreatedEvent, fromBlock, toBlock });
+      for (const log of logs) {
+        markets.push(log.args as unknown as MarketCreatedArgs);
+      }
+    } catch (error) {
+      failedWindows += 1;
+      if (failedWindows > SCAN_WINDOWS / 4) {
+        results.push({
+          check: "market discovery",
+          status: "BLOCKED",
+          detail:
+            `${failedWindows} of ${index + 1} log windows failed, most recently `
+            + `${(error as Error).message}. The scan cannot be trusted to have seen the range.`,
+        });
+        return results;
+      }
+    }
+  }
+
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const live = markets.filter((market) => market.expiry > nowSeconds);
   results.push({
-    check: "market metadata",
-    status: "BLOCKED",
+    check: "market discovery",
+    status: "OK",
     detail:
-      `market ${marketId ?? "(DREAMDEX_MARKET_ID unset)"} not read: the call is written against `
-      + "the pinned SDK, not from memory (PRD §0.2, §0.3).",
+      `${markets.length} MarketCreated log(s) across ${SCAN_WINDOWS * Number(GET_LOGS_MAX_SPAN)} `
+      + `blocks to head ${head}, ${live.length} still live`
+      + (failedWindows > 0 ? `, ${failedWindows} window(s) failed and were retried past` : ""),
+  });
+
+  if (marketId === undefined) {
+    // Listed rather than merely counted: PRD §17 makes which market to cover
+    // configuration, and configuration nobody can discover is not usable.
+    const soonestFirst = [...live].sort((a, b) => (a.expiry < b.expiry ? -1 : 1));
+    const listing = soonestFirst
+      .slice(0, 8)
+      .map((market) => {
+        const minutes = Number(market.expiry - nowSeconds) / 60;
+        return `\n        ${market.marketId}  ${market.asset} `
+          + `window=${Number(market.intervalSec) / 60}min expires in ${minutes.toFixed(0)}min `
+          + `pool=${market.pool}`;
+      })
+      .join("");
+    results.push({
+      check: "configured market",
+      status: "BLOCKED",
+      detail:
+        "DREAMDEX_MARKET_ID is unset, so there is no market to confirm. Live markets now:"
+        + (listing === "" ? " none" : listing),
+    });
+    return results;
+  }
+
+  const target = markets.find(
+    (market) => market.marketId.toLowerCase() === marketId.toLowerCase(),
+  );
+  if (target === undefined) {
+    results.push({
+      check: "configured market",
+      status: "PROTOCOL_CONFIG_CHANGED",
+      detail:
+        `DREAMDEX_MARKET_ID ${marketId} was not found in the scanned range. Either it is older `
+        + "than the scan, or it does not exist on this chain. PRD §17: stop, do not guess.",
+    });
+    return results;
+  }
+
+  results.push({
+    check: "configured market",
+    status: target.expiry > nowSeconds ? "OK" : "PROTOCOL_CONFIG_CHANGED",
+    detail:
+      `${target.asset} pool=${target.pool} expiry=${target.expiry} `
+      + `interval=${target.intervalSec}s ${target.expiry > nowSeconds ? "live" : "EXPIRED"}`,
   });
   return results;
 }

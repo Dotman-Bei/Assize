@@ -19,7 +19,7 @@ import {
 } from "@assize/protocol-types";
 import { storedSampleSchema, writableSampleSchema } from "@assize/protocol-types/schemas";
 
-import { isBreach, isSampleInDomain, spreadBps, verdict } from "./index.js";
+import { absoluteSpread, isBreach, isSampleInDomain, spreadBps, verdict } from "./index.js";
 
 const PIN = `0x${"ab".repeat(32)}` as const;
 
@@ -96,10 +96,10 @@ describe("verdict precedence (DECISIONS.md D-004)", () => {
       .toBe("SPREAD_BREACH");
   });
 
-  it("treats the committed spread bound as inclusive", () => {
-    // 4950/5050 is exactly 200 bps of mid.
-    expect(verdict(envelope(), sample({ bid: 4950n, ask: 5050n }))).toBe("COVERED_AT_SAMPLE");
-    expect(verdict(envelope(), sample({ bid: 4949n, ask: 5051n }))).toBe("SPREAD_BREACH");
+  it("treats the committed spread bound as absolute and inclusive", () => {
+    // The envelope commits to maxSpread 200, in the book's own price units.
+    expect(verdict(envelope(), sample({ bid: 4900n, ask: 5100n }))).toBe("COVERED_AT_SAMPLE");
+    expect(verdict(envelope(), sample({ bid: 4899n, ask: 5101n }))).toBe("SPREAD_BREACH");
   });
 
   it("requires the committed depth on both sides", () => {
@@ -121,23 +121,41 @@ describe("verdict precedence (DECISIONS.md D-004)", () => {
   });
 });
 
-describe("spreadBps", () => {
-  it("is scale invariant, which is what lets it work without a tick size", () => {
-    // PRD §17 forbids compiling in a tick size. The same relative spread must
-    // measure the same at any price scale (DECISIONS.md D-005).
-    expect(spreadBps(99n, 101n)).toBe(spreadBps(9_900n, 10_100n));
-    expect(spreadBps(99n, 101n)).toBe(spreadBps(990_000n, 1_010_000n));
+describe("absoluteSpread", () => {
+  it("is the raw difference, needing no scale and so no tick size", () => {
+    // PRD §17 forbids compiling in a tick size. Both operands come from the same
+    // book, so the comparison needs no conversion at all (DECISIONS.md D-011).
+    expect(absoluteSpread(4_900n, 5_100n)).toBe(200n);
+    expect(absoluteSpread(5_000n, 5_000n)).toBe(0n);
+    expect(absoluteSpread(0n, MAX_UINT128)).toBe(MAX_UINT128);
   });
 
-  it("floors, and does not overflow at the top of the width", () => {
-    expect(spreadBps(9_999n, 10_000n)).toBe(1n); // 20000/19999 floors to 1
-    expect(spreadBps(100_000n, 100_001n)).toBe(0n); // 20000/200001 floors to 0
-    expect(spreadBps(4_950n, 5_050n)).toBe(200n);
-    expect(spreadBps(1n, MAX_UINT128)).toBe(19_999n);
+  it("judges the same spread the same way wherever it sits in the range", () => {
+    // Under the superseded ratio-of-mid rule (D-005) these disagreed: the same
+    // 200-unit spread read as 400 bps at a mid of 10000 and 40 bps at 100000.
+    const envelopeAt200 = envelope({ maxSpread: 200n, minSize: 0n });
+    expect(verdict(envelopeAt200, sample({ bid: 9_900n, ask: 10_100n }))).toBe(
+      verdict(envelopeAt200, sample({ bid: 99_900n, ask: 100_100n })),
+    );
+  });
+});
+
+describe("spreadBps (display only)", () => {
+  it("renders the spreads frontend.md shows, in basis points of one contract", () => {
+    // frontend.md §3.2: bid 0.4920, ask 0.5080 renders as 160 bps.
+    // frontend.md §3.7: bid 0.4700, ask 0.5350 renders as 650 bps.
+    // Prices are probability in 1e6 units, so one whole contract is 1e6
+    // (IEventContracts.sol: "oneCollateral // 1e6 on testnet").
+    const ONE = 1_000_000n;
+    expect(spreadBps(492_000n, 508_000n, ONE)).toBe(160n);
+    expect(spreadBps(470_000n, 535_000n, ONE)).toBe(650n);
   });
 
-  it("is zero for a locked market", () => {
-    expect(spreadBps(5_000n, 5_000n)).toBe(0n);
+  it("is not an input to any verdict, and needs a scale the sample does not carry", () => {
+    // PRD §5.2: a verdict reads stored data only. priceScale is the market's
+    // oneCollateral, read from the pool at runtime, so this conversion lives
+    // outside the evaluator by construction.
+    expect(() => spreadBps(1n, 2n, 0n)).toThrow(RangeError);
   });
 });
 
