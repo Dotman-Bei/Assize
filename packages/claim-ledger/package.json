@@ -1,0 +1,13 @@
+{
+  "name": "@assize/claim-ledger",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/verify.ts",
+  "dependencies": {
+    "@assize/protocol-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2"
+  }
+}

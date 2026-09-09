@@ -1,0 +1,89 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Protocol drift check. Upstream changes get found by CI, not by a judge.
+    - cron: "0 6 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge build --sizes
+      - run: forge test -vvv
+      # Scoped to contracts/src: the fixture-replay test drives cheatcodes in a
+      # loop by design, which the linter flags on every iteration.
+      - run: forge lint contracts/src
+
+  differential:
+    # G2. The Solidity evaluator and packages/reference must agree, or nothing downstream is trusted.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:differential
+
+  hygiene:
+    # G1 and G8. The rules in AGENTS.md are only real if CI enforces them.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: No hex address literals in source
+        run: pnpm check:no-address-literals
+      - name: No forbidden vocabulary in claims or copy
+        run: pnpm check:vocabulary
+      - name: No absolute developer paths
+        run: pnpm check:paths
+      - name: Claim ledger consistent, no claim above its rung
+        run: pnpm claim:verify -- --offline
+
+  probe:
+    # Upstream wins. When a protocol fact moves, this goes red before a demo does.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm probe:all
+        env:
+          SOMNIA_RPC_URL: ${{ secrets.SOMNIA_RPC_URL }}
+          DREAMDEX_MARKET_ID: ${{ secrets.DREAMDEX_MARKET_ID }}

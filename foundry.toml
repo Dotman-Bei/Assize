@@ -1,0 +1,48 @@
+# PRD §13: Foundry for contracts, strict. PRD §8.1 puts contracts under contracts/.
+[profile.default]
+src = "contracts/src"
+test = "contracts/test"
+script = "contracts/script"
+out = "out"
+libs = ["contracts/lib"]
+solc_version = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+# PRD §13: strict. The compiler must emit no warnings. The style linter is run
+# separately over contracts/src by `pnpm lint:contracts`, because the post-build
+# lint step cannot be scoped away from the fixture-replay test, whose cheatcode
+# loop trips calls-loop on every one of its 10,000 iterations.
+fs_permissions = [{ access = "read", path = "./contracts/test/fixtures" }]
+
+# The G2 differential replays 10,000 fixture pairs in one call. Solidity never
+# frees memory, so the run is dominated by quadratic memory expansion rather than
+# by the evaluator itself. These limits are for that replay, not for anything
+# deployed: AssizeRegistry is size- and gas-checked by `forge build --sizes`.
+gas_limit = 9223372036854775807
+memory_limit = 1073741824
+
+[lint]
+# Tests replay 10,000 fixture pairs through cheatcodes in a loop by design, which
+# trips calls-loop and require-revert-in-loop on every iteration.
+exclude_lints = [
+    # TRUE AND DELIBERATE. AssizeRegistry escrows bonds and has no path to send
+    # ETH out, because payout is Phase P3 (docs/phase.md lists payouts as out of
+    # scope for P1) and PRD §27 forbids building a later phase's breadth first.
+    # This is the deferral recorded in DECISIONS.md D-006, and it is why the
+    # contract is not deployable until P3. When P3 adds settlement this entry is
+    # removed, and the lint should go quiet on its own.
+    "locked-ether",
+    # Intentional: `registerKeeper(address(0))` is how the owner disables the
+    # fallback keeper (PRD §26 K1). `onlySampler` already treats a zero keeper as
+    # "no keeper", so a zero here is a meaningful value, not a missing check.
+    "missing-zero-check",
+    # Style only, and rejected deliberately. `subscriber` and `owner` are public
+    # immutables whose getters are part of the ABI a verifier reads (PRD §11).
+    "screaming-snake-case-immutable",
+    # Style only. `spreadBps` stays a named function because it mirrors the
+    # exported `spreadBps` in packages/reference and is tested on its own.
+    "internal-function-used-once",
+    "modifier-used-only-once",
+    "unwrapped-modifier-logic",
+    "asm-keccak256",
+]

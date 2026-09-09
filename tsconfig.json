@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/protocol-types" },
+    { "path": "./packages/reference" },
+    { "path": "./packages/claim-ledger" },
+    { "path": "./scripts" }
+  ]
+}

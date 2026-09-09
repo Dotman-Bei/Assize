@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../dist/scripts",
+    "rootDir": ".",
+    "noEmit": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"],
+  "references": [
+    { "path": "../packages/protocol-types" },
+    { "path": "../packages/reference" }
+  ]
+}

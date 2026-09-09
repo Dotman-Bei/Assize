@@ -1,0 +1,35 @@
+{
+  "name": "assize",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --build --force",
+    "build": "pnpm -r --if-present build",
+    "test": "vitest run",
+    "test:differential": "tsx scripts/differential.ts",
+    "check:no-address-literals": "tsx scripts/checks/no-address-literals.ts",
+    "check:vocabulary": "tsx scripts/checks/vocabulary.ts",
+    "check:paths": "tsx scripts/checks/no-absolute-paths.ts",
+    "claim:verify": "tsx packages/claim-ledger/src/verify.ts",
+    "probe:dreamdex": "tsx scripts/probe-dreamdex.ts",
+    "probe:reactivity": "tsx scripts/probe-reactivity.ts",
+    "probe:all": "tsx scripts/probe-all.ts",
+    "lint:contracts": "forge lint contracts/src"
+  },
+  "devDependencies": {
+    "@assize/protocol-types": "workspace:*",
+    "@assize/reference": "workspace:*",
+    "@types/node": "^22.20.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "viem": "^2.21.55",
+    "vitest": "^2.1.8",
+    "zod": "^3.24.1"
+  }
+}

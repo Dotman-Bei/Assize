@@ -1,0 +1,82 @@
+{
+  "project": "assize",
+  "network": "somnia-shannon-testnet",
+  "ladder": {
+    "R0": "Asserted in a document",
+    "R1": "Covered by a passing test, including the Solidity and TypeScript differential",
+    "R2": "Executed once against a live DreamDEX market on Shannon, transaction recorded",
+    "R3": "Executed repeatedly across a sustained window, failures included in the published count",
+    "R4": "Re-derived by packages/verifier from a fresh clone against a public RPC"
+  },
+  "rules": [
+    "A claim may not state a rung its evidence does not reach.",
+    "A claim and its evidence land in the same commit or neither lands.",
+    "When execution contradicts a claim, narrow the claim in the same change and record it in DECISIONS.md.",
+    "Forbidden vocabulary: guaranteed, safe, liquid, always, protected, insured, risk-free."
+  ],
+  "claims": [
+    {
+      "id": "C-001",
+      "claim": "A breach is recorded only from a stored, block-pinned sample.",
+      "rung": "R0",
+      "target_rung": "R4",
+      "gate": "G2",
+      "evidence": [],
+      "verified_by": "pnpm test:differential"
+    },
+    {
+      "id": "C-002",
+      "claim": "A third party with no access to our systems can re-derive a recorded verdict from chain alone.",
+      "rung": "R0",
+      "target_rung": "R4",
+      "gate": "G7",
+      "evidence": [],
+      "verified_by": "assize verify <breachId>"
+    },
+    {
+      "id": "C-003",
+      "claim": "Samples were delivered by the Somnia reactivity path on a live market.",
+      "rung": "R0",
+      "target_rung": "R3",
+      "gate": "G3",
+      "evidence": [],
+      "verified_by": "pnpm verify:testnet -- C-003"
+    },
+    {
+      "id": "C-004",
+      "claim": "A real quoting breach was recorded against a live DreamDEX event contract market.",
+      "rung": "R0",
+      "target_rung": "R2",
+      "gate": "G4",
+      "evidence": [],
+      "verified_by": "pnpm verify:testnet -- C-004"
+    },
+    {
+      "id": "C-005",
+      "claim": "A forfeited bond was paid to witnessed traders, pro rata, on chain.",
+      "rung": "R0",
+      "target_rung": "R2",
+      "gate": "G5",
+      "evidence": [],
+      "verified_by": "pnpm verify:testnet -- C-005"
+    },
+    {
+      "id": "C-006",
+      "claim": "Sampling gaps are recorded as NOT_SAMPLED and are never counted as coverage.",
+      "rung": "R0",
+      "target_rung": "R3",
+      "gate": "G6",
+      "evidence": [],
+      "verified_by": "pnpm campaign -- --report"
+    },
+    {
+      "id": "C-007",
+      "claim": "A first-time user published a commitment unaided from the live app.",
+      "rung": "R0",
+      "target_rung": "R2",
+      "gate": "G9",
+      "evidence": [],
+      "verified_by": "pnpm ux:report"
+    }
+  ]
+}
