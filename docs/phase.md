@@ -17,7 +17,9 @@ P1 complete (G1, G2). Live on Shannon since 2026-09-10:
   sampled book 686000/714000, spread 28000, verdict re-derives to `SPREAD_BREACH` from chain alone.
   The 1 STT bond is recorded as forfeited.
 - **G11 partly.** Subscription funding and consumption are proven on chain and the cost per sample is
-  measured (roughly 0.016 STT at 6 gwei). The explicit unfunded state is not yet surfaced in a UI.
+  measured: **0.001286 STT per sample**, divided out of a completed run of 29,541 samples rather
+  than estimated from the gas limit. The unfunded state is now surfaced by the handler gas gauge on
+  the Markets page, which reads zero callbacks remaining in red when the prefund is exhausted.
 
 **Cut by K10 (DECISIONS.md D-021):** payouts, the claim flow, multi-market. Assize demonstrates
 measurement and penalty recording, **not settlement**. A bond is recorded forfeited and no trader is

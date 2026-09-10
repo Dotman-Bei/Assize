@@ -657,7 +657,9 @@ it — they measure the fixture, which is the thing that was wrong.
 
 **Decision.** Handler gas limits are set from an estimate against the live pool, and re-estimated
 whenever the pool changes. The current subscription uses 6,000,000. G11 requires publishing the cost
-per sample; at 6 gwei it is roughly 0.016 STT.
+per sample. Measured over the completed run it is 0.001286 STT: 38 STT funded, 0.0033 left at
+removal, 29,541 samples. The 0.016 figure first published here was the theoretical worst case — the
+entire gasLimit at the documented minimum base fee — and overstated the truth twelvefold. See D-043.
 
 **Cost.** `scripts/preflight.ts` and `contracts/test/FundingConstants.t.sol` carry a recommended
 limit that was derived from the fixture and is wrong by 10x. Both are corrected in this change. More
@@ -1237,3 +1239,32 @@ prove the app would receive that data from the real chain — that a genuine sam
 as a zeroed slot and be drawn as `NOT_SAMPLED`. The contract tests cover the storage side and the
 differential covers the evaluator, so the join is covered at both ends and asserted nowhere in the
 middle. Worth closing if a real `NOT_SAMPLED` ever lands on chain.
+
+---
+
+## D-043: The published cost per sample was wrong by twelve times
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, correcting a published number
+
+**Evidence.** D-022 and `DEPLOYMENT.md` published "roughly 0.016 STT" as the cost per sample, and
+`docs/phase.md` repeated it as the figure G11 requires. It was arrived at by multiplying the
+configured `gasLimit` of 6,000,000 by the reference's documented `MINIMUM_BASE_FEE_PER_GAS` of 6 gwei.
+
+That is the worst case a firing could cost, not what one did cost. The completed run divides out
+plainly: 38 STT funded, 0.0033 STT left when the subscription was removed, 29,541 samples written.
+**0.001286 STT per sample.** The published figure overstated it by twelve times.
+
+Two reasons the estimate was high. A handler is charged for gas used, not for the limit it reserves,
+and the observed gas price on the callback transaction was 1.8 gwei rather than the 6 gwei floor the
+document quotes.
+
+**Why it matters more than it looks.** G11 asks for the cost per sample to be *published*. A figure
+twelve times too high makes the product look twelve times more expensive to operate than it is, which
+is an error in our own disfavour — but it is still a published number that was not measured, and PRD
+§21's whole discipline is that a claim may not outrun its evidence. An estimate presented where a
+measurement was available is the same defect as a claim above its rung.
+
+**The rule this earns.** A number that can be divided out of a completed run is measured, not
+estimated. `0.001286` came from arithmetic on two balances and a counter, all readable from chain by
+anyone; the estimate came from multiplying two constants together.

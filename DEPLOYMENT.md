@@ -84,7 +84,11 @@ deployed with `cast send` instead.
   costs 254,574 against a test fixture, because a fixture returns a one-element array where a real
   `getBookLevels` walks an order book. A `gasLimit` of 1,000,000 — set from the fixture number — made
   every callback run out of gas, be charged for, and write nothing. Sampling looked dead while the
-  prefund drained. G11 requires publishing the cost per sample: at 6 gwei it is roughly 0.016 STT.
+  prefund drained. G11 requires publishing the cost per sample. **Measured over the completed run:
+  0.001286 STT.** That is 38 STT funded, 0.0033 left when the subscription was removed, 29,541 samples
+  written. An earlier figure of 0.016 STT was published here; it was the theoretical worst case, the
+  whole `gasLimit` at the documented minimum base fee, and it overstated the real cost by twelve
+  times. The number that belongs in a published claim is the one divided out of an actual run.
 - **The subscription's `gasLimit` is a funding floor.** The owner's balance is tested against the
   whole `gasLimit` at every firing, and falling below it removes the subscription rather than
   skipping an invocation (D-020).
