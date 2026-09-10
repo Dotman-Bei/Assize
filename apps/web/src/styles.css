@@ -27,7 +27,7 @@
   --verdict-absent: #ef4444;
   --verdict-not-sampled: #71717a;
   /* §1 typography */
-  --font-sans: "Geist Sans", Inter, -apple-system, system-ui, sans-serif;
+  --font-sans: "Geist Sans", "Inter", -apple-system, system-ui, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   /* Tailwind default spacing + radius */
   --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px;
@@ -51,21 +51,26 @@ code, .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular
 header.top {
   position: sticky; top: 0; z-index: 60; height: var(--s-14);
   display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-5);
+  /* Brand left, tabs centred, status and action right. The outer groups flex
+     equally so the nav sits on the true centre of the bar rather than wherever
+     the brand's width leaves it. */
   background: rgba(8,8,10,0.80); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
 }
-.brand { font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.14em; font-size: 14px; }
+.brand { font-family: var(--font-sans); font-weight: 700; letter-spacing: 0.16em; font-size: 15px; }
 /* §2: tabs separated from the brand by a 1px vertical border */
 .brand-rule { width: 1px; height: 24px; background: var(--border-subtle); }
-nav.tabs { display: flex; gap: var(--s-1); flex: 1; overflow-x: auto; scrollbar-width: none; }
+.nav-left, .nav-right { flex: 1 1 0; display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.nav-right { justify-content: flex-end; }
+nav.tabs { display: flex; gap: var(--s-2); flex: 0 0 auto; overflow-x: auto; scrollbar-width: none; }
 nav.tabs::-webkit-scrollbar { display: none; }
 nav.tabs a {
-  color: var(--text-secondary); font-size: 13px; padding: 7px 10px;
-  border-radius: var(--r-md); white-space: nowrap;
+  color: var(--text-secondary); font-size: 14px; font-weight: 400; padding: 7px 10px;
+  border-radius: var(--r-md); white-space: nowrap; letter-spacing: -0.005em;
 }
 nav.tabs a:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
 nav.tabs a[aria-current="page"] { color: var(--text-primary); background: var(--bg-surface); }
-.health { display: flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 12px; color: #a1a1aa; white-space: nowrap; }
+.health { display: flex; align-items: center; gap: 7px; font-family: var(--font-sans); font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
 .pulse { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--verdict-covered); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 .navlink { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
@@ -82,10 +87,11 @@ nav.tabs a[aria-current="page"] { color: var(--text-primary); background: var(--
 .btn-ghost { background: transparent; color: var(--text-secondary); }
 .btn-ghost:hover { color: var(--text-primary); }
 /* §2 wallet pill: STT balance + truncated address */
-.wallet-pill { display: flex; align-items: center; gap: var(--s-2); font-family: var(--font-mono);
-  font-size: 12px; color: var(--text-secondary); background: var(--bg-surface);
-  border: 1px solid var(--border-subtle); border-radius: var(--r-full); padding: 5px 10px; cursor: pointer; }
-.wallet-pill:hover { border-color: var(--border-strong); }
+.wallet-pill { display: flex; align-items: center; gap: var(--s-2); font-family: var(--font-sans);
+  font-size: 14px; font-weight: 500; color: #000; background: #fff;
+  border: 1px solid transparent; border-radius: var(--r-lg); padding: 7px var(--s-4); cursor: pointer;
+  white-space: nowrap; transition: background .12s; }
+.wallet-pill:hover { background: #e4e4e7; }
 
 main { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-5); }
 .page { padding: var(--s-12) 0 var(--s-16); }
@@ -126,7 +132,7 @@ h2 { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 var
 .p-NOT_SAMPLED       { color: var(--verdict-not-sampled);   background: rgba(113,113,122,.10); border-color: rgba(113,113,122,.20); }
 /* frontend.md §1 defines no colour for these two. They use tokens the document
    does define rather than a hex invented here, and are distinguished from each
-   other by border weight. Flagged for a decision — see DECISIONS.md D-030. */
+   other by border weight. Flagged for a decision, see DECISIONS.md D-030. */
 .p-WINDOW_CLOSED     { color: var(--text-muted); background: rgba(82,82,91,.10); border-color: var(--border-subtle); }
 .p-SAMPLER_FAILED    { color: var(--text-muted); background: rgba(82,82,91,.10); border-color: var(--border-focus); border-style: dashed; }
 /* §1 source attribution badges */
@@ -232,7 +238,8 @@ footer .mid { text-align: center; }
   .g4, .g2, .steps { grid-template-columns: 1fr; }
   header.top { flex-wrap: wrap; height: auto; padding: var(--s-2) var(--s-3); }
   nav.tabs { order: 3; width: 100%; }
-  .health, .brand-rule { display: none; }
+  .nav-left, .nav-right { flex: 0 0 auto; }
+  .health { display: none; }
   footer.bar .mid { display: none; }
 }
 @media (max-width: 390px) {
@@ -247,7 +254,7 @@ footer .mid { text-align: center; }
  * A cursor-tracked stroke reveal on the wordmark. Every colour is a §1 token:
  * the system is monochrome, so the reveal is --text-primary against
  * --border-strong rather than a gradient. No new hex enters the palette, and in
- * particular no verdict colour is used decoratively — those carry meaning.
+ * particular no verdict colour is used decoratively, those carry meaning.
  * See DECISIONS.md D-034.
  */
 .reveal { height: 190px; margin: var(--s-16) 0 0; cursor: crosshair; }

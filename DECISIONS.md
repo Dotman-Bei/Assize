@@ -1003,3 +1003,39 @@ does not ask for it, and that is recorded here rather than left to be found.
 **Cost.** The effect is more restrained than the original: no rainbow, no 7xl wordmark, no
 `font-[helvetica]`. That is the point — a five-colour sweep in a monochrome system would read as
 imported from somewhere else, because it would have been.
+
+---
+
+## D-035: Inter is loaded, the nav is centred, and em dashes are out of the app
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction
+
+**Three changes, on a reference screenshot the owner supplied.**
+
+**The typeface was never loading.** `frontend.md` §1 names "Geist Sans, Inter" for sans and
+"Geist Mono, JetBrains Mono" for mono. Neither was ever fetched, so every screen rendered in whatever
+the operating system defaulted to. The stack was right and the fonts were absent, which is why the
+app did not look like the document. Inter and JetBrains Mono are now loaded from Google Fonts, both
+named in §1, so this is the document being honoured rather than a new choice. Geist stays first in
+the stack for anyone who has it installed locally.
+
+**The nav is restructured to brand left, tabs centred, status and action right.** §2 lists the same
+elements but does not say where the tabs sit; the reference centres them, and they now centre on the
+bar rather than on whatever space the brand leaves. Measured at 1440px: bar centre and nav centre
+agree to the pixel. The wallet control became a solid white pill, which is the reference's treatment
+and which §2 leaves unspecified for the pill.
+
+**Em dashes are removed from every app string.** Twenty-nine of them. Each was replaced for its own
+sentence rather than swapped mechanically: an appositive became a comma or a colon, a parenthetical
+became brackets, a bare placeholder became "n/a", and a few sentences were simply split. A blind
+find-and-replace would have produced "a sample is one reading at one block - not a window", which is
+worse punctuation than what it replaced.
+
+**Cost.** The page now fetches from `fonts.googleapis.com`, so it has an external dependency it did
+not have before, and offline it falls back to the system face. That is tolerable because the page
+cannot function offline anyway: it reads the chain over the network. It is worth knowing before
+anyone claims the single file is fully self-contained, because it no longer quite is.
+
+**Not done.** The em dash removal covers `apps/web` only. `DECISIONS.md`, `BUILD_LOG.md`, `README.md`
+and the other repository documents still use them.

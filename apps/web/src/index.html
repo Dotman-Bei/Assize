@@ -3,16 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Assize — Liquidity is a promise. Assize enforces the bond.</title>
+<title>Assize. Liquidity is a promise. Assize enforces the bond.</title>
 <meta name="description" content="Turn unverified prediction market liquidity into an on-chain, sampled commitment.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2308080a'/%3E%3Cpath d='M12 3v18M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1M7 21h10' stroke='%23f4f4f5' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- frontend.md §1 names Geist Sans / Inter and Geist Mono / JetBrains Mono.
+     Neither was ever loaded, so the app fell back to the system face. These are
+     the two from that list that are freely servable. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <!-- ═══ §2 GLOBAL APP SHELL ═══ -->
 <header class="top">
-  <span class="brand">ASSIZE</span>
-  <span class="brand-rule"></span>
+  <div class="nav-left">
+    <span class="brand">ASSIZE</span>
+  </div>
   <nav class="tabs">
     <a href="#/" data-route="/">Overview</a>
     <a href="#/markets" data-route="/markets">Markets</a>
@@ -21,8 +28,10 @@
     <a href="#/claim" data-route="/claim">Claims</a>
     <a href="#/verify" data-route="/verify">Verifier</a>
   </nav>
-  <span class="health"><span class="pulse"></span><span id="health">Somnia Shannon</span></span>
-  <button class="wallet-pill" id="wallet">Connect Wallet</button>
+  <div class="nav-right">
+    <span class="health"><span class="pulse"></span><span id="health">Live on Shannon</span></span>
+    <button class="wallet-pill" id="wallet">Connect Wallet</button>
+  </div>
 </header>
 
 <main>
@@ -50,13 +59,13 @@
         <p class="h2-sub" style="margin:0">A prediction market shows a price produced by an order
           book, and an order book can be empty. On a thin book the number on screen is the residue of
           whoever quoted last, not an offer anyone will fill. A trader arrives, sizes up, finds no
-          counterparty, and leaves — and nothing anywhere records that it happened. The market's page
+          counterparty, and leaves, and nothing anywhere records that it happened. The market's page
           looks identical the next day.</p>
       </div>
       <div class="card">
         <h2>Reactivity-Driven Enforcement</h2>
         <p class="h2-sub" style="margin:0">Somnia's reactivity precompile invokes a handler when the
-          market emits, so validators — not us — drive the measurement. The handler reads the book at
+          market emits, so validators, not us, drive the measurement. The handler reads the book at
           that instant, writes a block-pinned sample, and the registry evaluates a deterministic
           verdict from stored data alone. A breach forfeits the maker's bond on chain.</p>
       </div>
@@ -73,7 +82,7 @@
     <p class="h2-sub">Read from chain when this page loaded, not from a database.</p>
     <div id="teaser" class="card flat"><span class="muted">reading the chain…</span></div>
 
-    <!-- Wordmark reveal. Not a section frontend.md §3 specifies — see D-034. -->
+    <!-- Wordmark reveal. Not a section frontend.md §3 specifies. See D-034. -->
     <div class="reveal" id="reveal" aria-hidden="true">
       <svg viewBox="0 0 300 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         <defs>
@@ -157,7 +166,7 @@
   <section class="page hidden" data-page="/verify">
     <h2 class="page-title">Verification playground</h2>
     <p class="h2-sub">Clean-room verification for judges, auditors and traders. Nothing here asks our
-      servers anything — there are none.</p>
+      servers anything. There are none.</p>
     <div class="grid g2">
       <div class="card">
         <h2>Interactive in-browser verifier</h2>

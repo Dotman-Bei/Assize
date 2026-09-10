@@ -1,5 +1,5 @@
 /**
- * Assize web surface. Layout, tokens and copy come from frontend.md — the
+ * Assize web surface. Layout, tokens and copy come from frontend.md, the
  * Midday.ai minimal dark monochromatic system. Nothing visual is invented; where
  * the document is silent, DECISIONS.md D-029 and D-030 record the reading taken.
  *
@@ -48,7 +48,7 @@ const num = (v) => Number(v).toLocaleString();
 
 const S = { one: 1_000_000n, commitments: [], samples: [], filter: "all", q: "", bq: "", account: null, step: 0 };
 
-/* frontend.md §3 Page 1 Section 4 — the five steps, verbatim, with what each
+/* frontend.md §3 Page 1 Section 4: the five steps, verbatim, with what each
    does and does not do. The second half is ours: PRD §21 forbids a claim that
    outruns its evidence, and step 5 does not exist in this deployment. */
 const LIFECYCLE = [
@@ -168,8 +168,8 @@ async function loadHealth() {
     const balance = await S.client.getBalance({ address: S.subscriber });
     const floor = BigInt(S.cfg.measurement.handlerGasLimit ?? 0) * 6n * 10n ** 9n;
     S.prefund = { balance, floor, firings: floor > 0n ? balance / floor : 0n };
-    $("#health").textContent = `Somnia Shannon · ${id}`;
-  } catch { $("#health").textContent = "Somnia Shannon · unreachable"; }
+    $("#health").textContent = `Live on Shannon · ${id}`;
+  } catch { $("#health").textContent = "Shannon unreachable"; }
 }
 
 async function loadChain() {
@@ -224,7 +224,7 @@ function renderLifecycle() {
 
 function renderBoundaries() {
   $("#boundaries").innerHTML = [
-    ["Evaluations occur at sampled instants.", "Assize does not promise continuous coverage. A sample is one reading at one block — not a window, not an average, and not proof the book held between two samples."],
+    ["Evaluations occur at sampled instants.", "Assize does not promise continuous coverage. A sample is one reading at one block, not a window, not an average, and not proof the book held between two samples."],
     ["Payouts reach witnessed traders only, and none has been paid.", "The registry can only ever pay addresses it saw trading. In this deployment it pays nobody: there is no settlement function at all."],
     ["The sample count is not the observation count.", "The subscription matches every log the pool emits, so a busy block yields several samples of one instant. Distinct blocks is the honest measure and both are shown."],
     ["The maker is ours.", "Labelled PROJECT_BASELINE. Not a third party, not adoption, not demand. It published a commitment it did not keep, which is what it exists to do."],
@@ -275,7 +275,7 @@ function renderMarkets() {
       <td class="n">${num(c.minSize)}</td>
       <td class="n">${formatEther(c.bond)} STT</td>
       <td>${c.last ? pill(c.last.state) : pill("NOT_SAMPLED")}</td>
-      <td>${c.last ? src(sampleSourceFromCode(Number(c.last.sample.source))) : "<span class='muted'>—</span>"}</td>
+      <td>${c.last ? src(sampleSourceFromCode(Number(c.last.sample.source))) : "<span class='muted'>n/a</span>"}</td>
       <td class="n">${remaining > 0n ? `${num(remaining)} blocks` : "<span class='muted'>closed</span>"}</td>
       <td><span class="muted">Details →</span></td></tr>`;
   }).join("");
@@ -308,7 +308,7 @@ function renderMarketDetail(c) {
         <div class="stat-label">Envelope status</div>
         <dl class="kv" style="margin-top:var(--s-3)">
           <dt>MAKER</dt><dd>${cut(c.maker)}</dd>
-          <dt>ACTIVE BOND</dt><dd>${formatEther(c.bond)} STT ${c.forfeitedAtBreachIdPlusOne > 0n ? `<span style="color:var(--verdict-spread-breach)">— forfeited</span>` : ""}</dd>
+          <dt>ACTIVE BOND</dt><dd>${formatEther(c.bond)} STT ${c.forfeitedAtBreachIdPlusOne > 0n ? `<span style="color:var(--verdict-spread-breach)">(forfeited)</span>` : ""}</dd>
           <dt>MAX SPREAD</dt><dd>${num(c.maxSpread)} raw · ${bps(c.maxSpread, S.one)} bps</dd>
           <dt>MIN SIZE</dt><dd>${num(c.minSize)} contracts per side</dd>
           <dt>WINDOW</dt><dd>${num(c.start)} → ${num(c.end)}</dd>
@@ -325,7 +325,7 @@ function renderMarketDetail(c) {
     ${hasGap ? `<div class="gap-banner" style="margin-top:var(--s-3)">Sampling occurs at discrete instants. An unrecorded block tick is logged as NOT_SAMPLED rather than smoothed over.</div>` : ""}
     <h2 style="margin-top:var(--s-8)">Live sample inspection ledger</h2>
     <p class="h2-sub">${blocks} distinct blocks across the ${S.samples.length} most recent of ${num(S.total)} samples.
-      <strong>×N</strong> counts samples that read the same book at the same block — the subscription
+      <strong>×N</strong> counts samples that read the same book at the same block. The subscription
       matches every log the pool emits. Click a row for the stored struct.</p>
     <div class="table-wrap"><div class="scroll"><table>
       <thead><tr><th>Sample</th><th>Block</th><th>Block hash</th><th>Bid / Ask</th><th>Spread</th><th>Size</th><th>Source</th><th>Verdict</th></tr></thead>
@@ -389,7 +389,7 @@ async function renderBreaches() {
   $("#breachRows").innerHTML = visible.map((r) => `
     <tr class="row" data-breach="${r.i}">
       <td class="n">#BR-${String(r.i).padStart(5, "0")}</td>
-      <td class="n">${r.c ? cut(r.c.marketId, 10, 6) : "—"}</td>
+      <td class="n">${r.c ? cut(r.c.marketId, 10, 6) : "n/a"}</td>
       <td>${pill(r.state)}</td>
       <td class="n">${num(r.rec.sample.blockNumber)}</td>
       <td class="n">${r.c ? formatEther(r.c.bond) : "0"} STT</td>
@@ -411,8 +411,8 @@ async function dossier(r) {
       <dl class="kv">
         <dt>INCIDENT</dt><dd>#BR-${String(r.i).padStart(5, "0")}</dd>
         <dt>REGISTRY</dt><dd>${S.registry}</dd>
-        <dt>VIOLATED</dt><dd>Observed spread ${bps(spread, S.one)} bps exceeded committed max ${c ? bps(c.maxSpread, S.one) : "—"} bps
-          <span class="muted">(${num(spread)} raw against ${c ? num(c.maxSpread) : "—"} raw)</span></dd>
+        <dt>VIOLATED</dt><dd>Observed spread ${bps(spread, S.one)} bps exceeded committed max ${c ? bps(c.maxSpread, S.one) : "n/a"} bps
+          <span class="muted">(${num(spread)} raw against ${c ? num(c.maxSpread) : "n/a"} raw)</span></dd>
         <dt>SAMPLE</dt><dd>#${r.b.sampleId} at block ${num(s.blockNumber)}</dd>
         <dt>BLOCK HASH</dt><dd>${s.blockHash}<br><span style="color:${pinOk ? "var(--verdict-covered)" : "var(--text-muted)"}">
           ${pinOk === null ? "could not re-read the block" : pinOk ? "parent hash confirmed canonical on Shannon" : "pin does not resolve"}</span></dd>
@@ -437,10 +437,10 @@ function renderPublish() {
     <label class="field" for="fMarket">Market</label>
     <select class="input" id="fMarket">${S.commitments.map((x) => `<option value="${x.marketId}">${cut(x.marketId, 14, 8)}</option>`).join("")}</select>
     <div class="hint">Queried from chain, never a hardcoded string.</div>
-    <label class="field" for="fSpread">Maximum allowable spread — raw price units</label>
+    <label class="field" for="fSpread">Maximum allowable spread, in raw price units</label>
     <input class="input" id="fSpread" type="number" value="${c ? c.maxSpread : 15000}">
     <div class="hint" id="spreadHint"></div>
-    <label class="field" for="fDepth">Minimum book depth — contracts, both bid and ask</label>
+    <label class="field" for="fDepth">Minimum book depth, contracts on both bid and ask</label>
     <input class="input" id="fDepth" type="number" value="${c ? c.minSize : 100000000}">
     <div class="hint">Each side must carry this. One thin side breaches.</div>
     <label class="field" for="fWindow">Commitment window</label>
@@ -451,17 +451,17 @@ function renderPublish() {
       <option value="864000">24 hours (864,000 blocks)</option>
     </select>
     <div class="hint">Somnia produces a block every 100ms.</div>
-    <label class="field" for="fBond">Bond collateral — STT into escrow</label>
+    <label class="field" for="fBond">Bond collateral, STT into escrow</label>
     <input class="input" id="fBond" type="number" step="0.1" value="1">
-    <label class="field" for="fGas">Handler gas prefund — STT</label>
+    <label class="field" for="fGas">Handler gas prefund, STT</label>
     <input class="input" id="fGas" type="number" step="0.1" value="38">
     <div class="hint">Estimated from callback frequency. The owner's balance is tested against the whole gas limit at every firing.</div>
     <div class="card flat" style="background:var(--bg-canvas);margin:var(--s-4) 0">
       <div class="stat-label">Economic summary</div>
       <dl class="kv" style="margin-top:var(--s-3)">
-        <dt>COLLATERAL ESCROW</dt><dd id="sumBond">—</dd>
-        <dt>HANDLER PREFUND</dt><dd id="sumGas">—</dd>
-        <dt>TOTAL REQUIRED</dt><dd id="sumTotal">—</dd>
+        <dt>COLLATERAL ESCROW</dt><dd id="sumBond">n/a</dd>
+        <dt>HANDLER PREFUND</dt><dd id="sumGas">n/a</dd>
+        <dt>TOTAL REQUIRED</dt><dd id="sumTotal">n/a</dd>
       </dl>
     </div>
     <div id="publishState"></div>
@@ -501,7 +501,7 @@ async function refreshPublish() {
     const state = evaluate({ maxSpread: spread, minSize: BigInt($("#fDepth").value || 0), start: 0n, end: 2n ** 63n },
       { ...latest.sample, source: sampleSourceFromCode(Number(latest.sample.source)) });
     dry = `<div class="note">Against the latest on-chain sample this envelope evaluates to ${pill(state)}
-      ${state === "COVERED_AT_SAMPLE" ? "— it would hold right now." : "— it would breach immediately."}</div>`;
+      ${state === "COVERED_AT_SAMPLE" ? "It would hold right now." : "It would breach immediately."}</div>`;
   }
   if (held < total) {
     box.innerHTML = dry + `<div class="note amber"><strong>Insufficient STT.</strong> Testnet tokens must
@@ -548,7 +548,7 @@ function renderClaim() {
       <div class="stat-label">Connected wallet audit</div>
       <dl class="kv" style="margin-top:var(--s-3)">
         <dt>ADDRESS</dt><dd id="claimAddr">${S.account ? S.account : "not connected"}</dd>
-        <dt>WITNESSED FILLS</dt><dd>0 <span class="muted">— the registry witnesses no fills in this deployment</span></dd>
+        <dt>WITNESSED FILLS</dt><dd>0 <span class="muted">(the registry witnesses no fills in this deployment)</span></dd>
         <dt>ATTRIBUTED VOLUME</dt><dd>0.00 STT</dd>
         <dt>CALCULATED SHARE</dt><dd>0.00%</dd>
       </dl>
@@ -557,7 +557,7 @@ function renderClaim() {
         deployment no wallet did, because fills are not witnessed at all.</div>
       <button class="btn btn-white" disabled style="width:100%;justify-content:center;margin-top:var(--s-3)">Claim Payout</button>
       <p class="h2-sub" style="margin-top:var(--s-3)">Payouts would strictly enforce self-match rejection
-        and per-address distribution caps. Would — the mechanism is designed in
+        and per-address distribution caps. Would: the mechanism is designed in
         <code>PRD.md</code> §5.3 and §12 and is not deployed here.</p>
     </div>`;
 }
@@ -584,7 +584,7 @@ async function runVerifier() {
     print(`→ connecting to ${S.rpc}`);
     const read = (fn, args) => S.client.readContract({ address: S.registry, abi, functionName: fn, args });
     const rec = await read("sampleAt", [id]);
-    if (rec.sample.blockNumber === 0n) { print(`! no sample #${id} on chain — verdict NOT_SAMPLED`); return; }
+    if (rec.sample.blockNumber === 0n) { print(`! no sample #${id} on chain, verdict NOT_SAMPLED`); return; }
     print(`→ sample #${id} read from the registry`);
     const c = await read("commitmentAt", [rec.commitmentId]);
     print(`→ commitment #${rec.commitmentId} read`);
@@ -597,7 +597,7 @@ async function runVerifier() {
     print(`→ packages/reference re-derives: ${derived}`);
     const chain = VERDICT_STATES[Number(await read("verdictOf", [id]))];
     print(`→ the chain says:              ${chain}`);
-    print(derived === chain && pinOk ? `\nPASS — verdicts match and the pin resolves.` : `\nFAIL — see above.`);
+    print(derived === chain && pinOk ? `\nPASS. Verdicts match and the pin resolves.` : `\nFAIL. See above.`);
   } catch (error) { print(`! ${error.shortMessage ?? error.message}`); }
 }
 
@@ -605,7 +605,7 @@ async function connect() {
   if (!globalThis.ethereum) {
     $("#overlay").innerHTML = `<div class="modal-scrim"><div class="modal">
       <h2>No wallet found</h2><p class="h2-sub">Install an injected wallet, or post a commitment with
-      <code>cast</code> — see the Verifier tab.</p>
+      <code>cast</code>. See the Verifier tab.</p>
       <button class="btn btn-white" data-close>Close</button></div></div>`;
     return null;
   }

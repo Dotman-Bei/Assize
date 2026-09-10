@@ -1,6 +1,6 @@
 /**
  * Icons from Lucide, as frontend.md §5.1 requires. Extracted verbatim from the
- * `lucide-static` package at build time rather than redrawn — a hand-made glyph
+ * `lucide-static` package at build time rather than redrawn , a hand-made glyph
  * would be an invented visual decision.
  *
  * MIT licensed, (c) Lucide contributors.

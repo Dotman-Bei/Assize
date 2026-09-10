@@ -831,3 +831,32 @@ Verified in the browser against the running dev server: the mask centre moves fr
 to `90,50` under the pointer, the draw-on completes, no console errors, no overflow at 390, 768 or
 1440. First pass read too faint to look deliberate, so the mask holds full luminance to 52% before
 falling away and the lit stroke widened — tuning inside the same tokens. D-034.
+
+---
+
+## 2026-09-10 — Typeface, nav structure, em dashes
+
+Three changes against a reference screenshot the owner supplied.
+
+**The font was never loading.** §1 names Geist Sans / Inter and Geist Mono / JetBrains Mono, and none
+was ever fetched, so the app rendered in the system default. That is the whole reason it did not look
+like the document. Inter and JetBrains Mono now load from Google Fonts, both named in §1.
+
+**Nav restructured** to brand left, tabs centred, status and action right. §2 lists these elements
+without placing them; measured at 1440px the nav centre and bar centre now agree to the pixel. The
+wallet control is a solid white pill, matching the reference.
+
+**Em dashes removed from every app string** — twenty-nine, each replaced for its own sentence rather
+than swapped mechanically. Verified zero remain in the rendered DOM.
+
+```
+Inter loaded                       true
+tabs centred                       bar 720px, nav 720px, off by 0px
+em dashes in rendered DOM          0
+console errors                     none
+overflow at 390 / 768 / 1440       none
+```
+
+D-035, including the cost: the page now depends on fonts.googleapis.com, so the single file is no
+longer quite self-contained. It falls back to the system face offline, where it cannot read the chain
+anyway. Repository documents still use em dashes; only `apps/web` was cleared.
