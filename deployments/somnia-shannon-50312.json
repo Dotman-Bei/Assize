@@ -1,0 +1,40 @@
+{
+  "$comment": [
+    "The deployment record. PRD §17 keeps addresses out of apps/ and packages/;",
+    "they live here and in DEPLOYMENT.md, and are read at runtime from the",
+    "environment. This file is the record, not a source of compiled-in constants."
+  ],
+  "network": "somnia-shannon-testnet",
+  "chainId": 50312,
+  "rpcUrl": "https://dream-rpc.somnia.network",
+  "deployedAt": "2026-09-10",
+  "contracts": {
+    "AssizeRegistry": "0xa43d71fff5ecedc577a0623421a16c2d11dc6b61",
+    "CoverageSubscriber": "0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0"
+  },
+  "accounts": {
+    "deployer": "0xF3F0C3fB033e97F6f09BAe7F52329a8825167054",
+    "maker": "0x62Ec9c9410c1b59647749D4d3005c75b9F380F38",
+    "$note": "Two accounts by design — DECISIONS.md D-019."
+  },
+  "measurement": {
+    "dreamdexPool": "0x279Ff833DD608B3fFdBB7cA679A43D173Ee14c1A",
+    "marketId": "0x0000000000000000000000000000000000000000000000000000000000018bb8",
+    "subscriptionId": "17611580",
+    "handlerGasLimit": 6000000,
+    "handlerGasMeasuredLive": 2730154,
+    "commitment": {
+      "id": 0,
+      "maxSpreadRaw": 15000,
+      "minSize": 100000000,
+      "startBlock": 484437694,
+      "endBlock": 484837694,
+      "bondWei": "1000000000000000000",
+      "forfeited": true
+    }
+  },
+  "evidence": {
+    "callbackTx": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
+    "$note": "A reactive transaction: from and to are both the subscriber, and the nonce is the block-unique reactivity nonce."
+  }
+}

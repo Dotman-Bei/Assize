@@ -602,3 +602,115 @@ the subscriber well above `gasLimit * price` rather than near it.
 subscription but does lose the sample. Too loose and the balance floor rises. The number must be
 re-measured against a real pool once G3 has produced one invocation, and published as the cost per
 sample that gate G11 requires.
+
+---
+
+## D-021: K9 resolved — the window is open. K10 fires — scope is cut.
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted. Resolves the `OWNER DECISION` that has been open since D-010.
+
+**Evidence.** The owner supplied a screenshot of the hackathon's own channel: "Final submissions is
+on — 5,000 USD prize pool, closes in 1d 17h", linking dorahacks.io/hackathon/event-contracts. The
+window PRD §2 recorded as closed is open. K9 resolves to continue.
+
+**K10 fires in the same moment.** "G4 has not passed with 48 hours left in the window → Cut payouts,
+cut multi-market, cut the claim flow. Protect G3, G4, G7, G9, and G12 in that order." At the time of
+that message G4 had not passed and roughly 41 hours remained. The cut is therefore mandatory, not a
+judgement call.
+
+**Cut, as K10 directs:**
+
+- **Payouts and the claim flow.** `claim(breachId)`, witnessed volume, and the trader claim surface
+  in `frontend.md` §3.8. Claim C-005 stays at R0 and its gate G5 is abandoned for this submission.
+  The registry already had no settlement path (D-006); that deferral is now permanent for this cycle.
+- **Multi-market.** One market, as PRD §27 already scoped P2.
+
+**Protected, in K10's order:** G3, G4, G7, G9, G12.
+
+**Cost, stated plainly.** Assize will demonstrate measurement and penalty recording but **not
+settlement**. A bond is recorded as forfeited and no trader is paid, because the code that would pay
+them is cut. Every surface and every claim must say so: the product measures and records, and the
+payout half exists in the design and not in the deployment. Anything that implies a trader was made
+whole would be false.
+
+---
+
+## D-022: A gas limit measured against a fixture is not a measurement
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Evidence.** `CoverageSubscriber.onEvent` costs **254,574 gas** against the test fixture pool and
+**2,730,154 gas** against a live DreamDEX pool — an order of magnitude more. A fixture returns a
+one-element array; a real `getBookLevels` walks an order book.
+
+The first subscription was configured with `gasLimit = 1,000,000`, chosen from the fixture number and
+recorded in D-020 as measured. Every callback then ran out of gas. The reactive transactions fired,
+were charged, and wrote nothing. From outside it looked exactly like a subscription that was not
+firing at all: sample count frozen at zero while the prefund drained. The only signal that anything
+was happening was the subscriber's balance falling.
+
+**What found it.** Not a test. `cast estimate` against the deployed handler and the real pool, run
+because the balance was dropping while the sample count was not. The unit tests could not have caught
+it — they measure the fixture, which is the thing that was wrong.
+
+**Decision.** Handler gas limits are set from an estimate against the live pool, and re-estimated
+whenever the pool changes. The current subscription uses 6,000,000. G11 requires publishing the cost
+per sample; at 6 gwei it is roughly 0.016 STT.
+
+**Cost.** `scripts/preflight.ts` and `contracts/test/FundingConstants.t.sol` carry a recommended
+limit that was derived from the fixture and is wrong by 10x. Both are corrected in this change. More
+generally: any number this repository derives from a fixture and calls a measurement deserves the
+same suspicion.
+
+---
+
+## D-023: The subscriber could not be funded, and the tests could not have known
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Evidence.** The first `CoverageSubscriber` had no `receive()` function. The plain transfer meant to
+fund it reverted, so it could never hold the balance a subscription owner is required to hold, and
+could never have fired a callback.
+
+Fifteen tests passed against that contract, including one asserting that subscribing requires the
+minimum owner balance. They all funded it with `vm.deal`, which writes a balance directly into state
+and performs no transfer. They proved the contract could **hold** a balance. Nobody had asked whether
+it could **be given** one.
+
+**Decision.** `receive()` added, and `test_can_be_funded_by_a_plain_transfer` asserts the property
+that was actually missing by making a real call. A `sweep(to)` restricted to the funder was added
+alongside it, so a superseded deployment's prefund can be recovered — which matters because testnet
+funds are rate limited to one claim a day, and the first deployment stranded its bond.
+
+**Cost.** The registry's `subscriber` is immutable, so fixing the subscriber meant redeploying the
+registry too, and the 1 STT bond in the first registry is stranded permanently — there is no
+settlement path to release it (D-006). That is the honest price of the bug: it is recorded rather
+than quietly re-funded, and it is why `evidence/` counts start from the second deployment.
+
+---
+
+## D-024: A wildcard topic filter samples the same instant many times
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted, with a correction owed
+
+**Evidence.** The subscription filters on the pool's address with all four topics zero, so every log
+the pool emits triggers one callback. A block containing many pool events produces many samples that
+read the same book at the same instant. The first live run recorded **1132 samples across 84 distinct
+blocks** — roughly thirteen samples per observed instant.
+
+None is fabricated. Each is a real callback that really read the book. But they are redundant, and
+quoting 1132 as a count of how often coverage was observed would overstate the measurement by an
+order of magnitude — the same kind of overstatement PRD §14 forbids when it says `NOT_SAMPLED` may
+never be folded into coverage.
+
+**Decision.** `evidence/live-run.txt` reports both numbers and says in plain words which one means
+what. No published figure quotes the sample count without the distinct-block count beside it.
+
+**Owed.** The filter should narrow to a topic that marks a book-changing event, so that one
+observation corresponds to one instant. That reduces gas roughly thirteenfold as well. It is not done
+in this change because K10 protects G3, G4, G7, G9 and G12 in that order and the honest reporting
+closes the correctness gap; it is the first thing to fix if the campaign is extended.

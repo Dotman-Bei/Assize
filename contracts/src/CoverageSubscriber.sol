@@ -41,9 +41,24 @@ contract CoverageSubscriber is SomniaEventHandler {
     /// @notice The subscription this contract owns, once created. Zero until then.
     uint256 public subscriptionId;
 
+    /// @notice The account that may recover unspent handler prefund.
+    /// @dev The deployer, fixed at construction. This contract holds no user
+    /// money: its balance is gas prefund for callbacks, which the reactivity
+    /// precompile spends on its behalf. Recovering it matters operationally
+    /// because testnet funds are rate limited, and stranding a prefund in a
+    /// superseded subscriber costs a day.
+    /// @dev This is not a lever over anything measured. The registry holds the
+    /// bonds and has no admin path at all (PRD §10). Draining this balance stops
+    /// sampling, which is PRD §12's griefing row — and that row's mitigation is
+    /// unchanged: an unfunded window surfaces as an explicit unfunded state
+    /// rather than expiring clean. The funder is the deployer, not the maker
+    /// (DECISIONS.md D-019), so it cannot be used by a maker against its own bond.
+    address public immutable funder;
+
     event SubscriptionCreated(uint256 indexed subscriptionId, address indexed emitter);
     event SampleForwarded(uint256 indexed sampleId, uint64 blockNumber);
     event SampleSkipped(string reason);
+    event Swept(address indexed to, uint256 amount);
 
     error ZeroAddress();
     error AlreadySubscribed();
@@ -51,6 +66,8 @@ contract CoverageSubscriber is SomniaEventHandler {
     error EmitterNotThePool(address emitter);
     error FilterWouldMatchOurselves();
     error BookValueTooWide();
+    error NotFunder(address caller);
+    error SweepFailed();
 
     constructor(IBinaryPool pool_, AssizeRegistry registry_, uint256 commitmentId_) {
         if (address(pool_) == address(0) || address(registry_) == address(0)) {
@@ -59,6 +76,29 @@ contract CoverageSubscriber is SomniaEventHandler {
         pool = pool_;
         registry = registry_;
         commitmentId = commitmentId_;
+        funder = msg.sender;
+    }
+
+    /// @notice Accept handler prefund.
+    /// @dev Without this the contract cannot be funded at all, and a subscription
+    /// it owns can never fire. The first deployment of this contract omitted it,
+    /// and the plain transfer that was meant to fund it reverted. The tests did
+    /// not catch it because they used `vm.deal`, which writes a balance directly
+    /// and never performs a transfer — so they proved the contract could hold a
+    /// balance, not that anyone could give it one.
+    receive() external payable {}
+
+    /// @notice Recover unspent prefund.
+    /// @dev Restricted to the funder. Sweeping while a subscription is live stops
+    /// sampling, so it is for recovering a superseded deployment, not for use
+    /// mid-window.
+    function sweep(address payable to) external {
+        if (msg.sender != funder) revert NotFunder(msg.sender);
+        if (to == address(0)) revert ZeroAddress();
+        uint256 balance = address(this).balance;
+        (bool ok,) = to.call{value: balance}("");
+        if (!ok) revert SweepFailed();
+        emit Swept(to, balance);
     }
 
     /* --------------------------------------------------------------------- *

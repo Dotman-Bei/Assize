@@ -449,3 +449,82 @@ Two items now: the SDK does not list `dist/eventsAbi.js` in its `exports`, so `m
 — which carries the only publication of a `marketId` — must be reached by resolving the package root;
 and the public RPC's missing `eth_getProof` / EIP-1898 support makes `forge test --fork-url`
 unusable against Shannon.
+
+---
+
+## 2026-09-10 — Live on Shannon. G3 and G4 pass.
+
+**Outcome. Assize measured a real DreamDEX market, recorded a real breach, and forfeited a real
+bond.** G1, G2, G3, G4 pass. K9 resolved (window open); K10 fired and its cut is recorded.
+
+| | |
+|---|---|
+| `AssizeRegistry` | `0xa43d71fff5ecedc577a0623421a16c2d11dc6b61` |
+| `CoverageSubscriber` | `0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0` |
+| Market | `0x0000000000000000000000000000000000000000000000000000000000018bb8` on pool `0x279Ff833DD608B3fFdBB7cA679A43D173Ee14c1A` |
+| Commitment | max spread 15000 raw, min size 1e8, 1 STT bond, **forfeited** |
+| Callback tx | `0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf` |
+
+From `evidence/live-run.txt`, read back from chain:
+
+```
+samples observed:        1132
+distinct blocks sampled:   84
+  SPREAD_BREACH         1132        REACTIVITY  1132
+  every other state        0        KEEPER         0
+```
+
+### Three bugs, none of which a test could have caught
+
+**1. The subscriber could not be funded.** No `receive()`. The transfer meant to fund it reverted, so
+it could never have held the balance a subscription owner must hold. Fifteen tests passed against it,
+all funding with `vm.deal` — which writes a balance and performs no transfer. They proved it could
+*hold* a balance; nobody asked whether it could *be given* one. Fixed, and
+`test_can_be_funded_by_a_plain_transfer` now asserts the property that was missing. Cost: the
+registry's subscriber is immutable, so the fix meant redeploying both, and 1 STT is stranded in the
+abandoned registry with no settlement path to release it. D-023.
+
+**2. The commitment silently failed to publish.** `start = block + 15` is **1.5 seconds** on a chain
+with 100ms blocks. The transaction landed after its own window had opened and reverted with
+`WindowStartsInThePast`. It went unnoticed because that step's output was piped to `/dev/null`. The
+handler then reverted `NoSuchCommitment(0)` on every callback.
+
+**3. The gas limit was measured against a fixture.** `onEvent` costs 254,574 gas against the test
+fixture and **2,730,154** against a live pool: a fixture returns a one-element array, a real
+`getBookLevels` walks a book. With `gasLimit = 1,000,000` every callback ran out of gas, was charged,
+and wrote nothing. From outside it was indistinguishable from a subscription that never fired —
+sample count frozen at zero while the prefund drained. Found by `cast estimate` against the live
+pool, run only because the balance was falling while the count was not. D-022.
+
+Bug 3 is the one worth remembering. The unit tests could not have found it: they measure the fixture,
+and the fixture was the thing that was wrong.
+
+### An overstatement caught before it was published
+
+The subscription uses a wildcard topic filter, so every pool log triggers a callback and a busy block
+yields many samples reading the same book at the same instant — 1132 samples across 84 blocks.
+None is fabricated, but quoting 1132 as "how often coverage was observed" would overstate the
+measurement roughly thirteenfold. `evidence/live-run.txt` prints both numbers and says which one
+means what. Narrowing the filter is owed. D-024.
+
+### K10's cut
+
+Payouts, the claim flow and multi-market are cut. Assize demonstrates measurement and penalty
+recording, **not settlement**: a bond is recorded forfeited and no trader is paid, because the code
+that would pay them is cut. C-005 stays at R0 and G5 is abandoned for this cycle.
+
+### Claims moved, with evidence in the same commit
+
+C-003 R0→R2, C-004 R0→**R2, its target**, C-001 R1→R2. C-002, C-005, C-006, C-007 unmoved.
+
+### Commands
+
+```
+cast send --create ...                    registry, subscriber deployed
+cast send ... publishCommitment            commitment 0, 1 STT bond
+cast send ... subscribe(...)               subscription 17611580, gasLimit 6,000,000
+cast estimate ... onEvent                  2,730,154 gas against the live pool
+pnpm evidence:report                       exit 0  read back from chain
+pnpm claim:verify -- --offline              exit 0  every claim at or below its evidence
+forge test                                  exit 0
+```

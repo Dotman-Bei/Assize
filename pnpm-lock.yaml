@@ -45,6 +45,9 @@ importers:
       '@assize/protocol-types':
         specifier: workspace:*
         version: link:../protocol-types
+      '@assize/reference':
+        specifier: workspace:*
+        version: link:../reference
     devDependencies:
       '@types/node':
         specifier: ^22.20.2

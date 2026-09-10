@@ -1,28 +1,45 @@
 # Current phase
 
-**Phase: P2. Status: in progress, not deployed. P1 is COMPLETE — G1 and G2 both pass.**
+**Phase: P2. Status: DEPLOYED AND MEASURING. G3 and G4 pass. G11 partly.**
+
+P1 complete (G1, G2). Live on Shannon since 2026-09-10:
+
+| | |
+|---|---|
+| `AssizeRegistry` | `0xa43d71fff5ecedc577a0623421a16c2d11dc6b61` |
+| `CoverageSubscriber` | `0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0` |
+| Market under measurement | `0x0000000000000000000000000000000000000000000000000000000000018bb8` |
+
+- **G3 PASSED.** Validators invoked the handler; samples are written with `source: REACTIVITY` and a
+  block pin. Callback tx `0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf`, whose
+  `from` and `to` are both the subscriber and whose nonce is the block-unique reactivity nonce.
+- **G4 PASSED.** A real quoting breach recorded against a live market: committed max spread 15000,
+  sampled book 686000/714000, spread 28000, verdict re-derives to `SPREAD_BREACH` from chain alone.
+  The 1 STT bond is recorded as forfeited.
+- **G11 partly.** Subscription funding and consumption are proven on chain and the cost per sample is
+  measured (roughly 0.016 STT at 6 gwei). The explicit unfunded state is not yet surfaced in a UI.
+
+**Cut by K10 (DECISIONS.md D-021):** payouts, the claim flow, multi-market. Assize demonstrates
+measurement and penalty recording, **not settlement**. A bond is recorded forfeited and no trader is
+paid, because the code that would pay them is cut. Nothing may imply otherwise.
 
 Updated 2026-09-10. Both gates in P1's stop boundary are met, so nothing in P1 blocks a move to P2.
 
-P2's code is written and tested: `CoverageSubscriber.sol`, the pool interface it samples through,
-and `contracts/script/Deploy.s.sol`. **Nothing has been deployed**, and the deployment is not blocked
-on code. It is blocked on three things the owner holds:
-
-1. **K9 (`OWNER DECISION`)** — whether the submission path continues at all.
-2. **A funded key.** AGENTS.md §0.6: secrets and testnet funds are the owner's to supply, and no key
-   is ever printed, logged or committed.
-3. **Testnet funds, in a specific amount.** The bond, plus the subscriber's minimum owner balance,
-   plus a per-callback gas budget. The pinned reactivity library refuses to subscribe below the
-   minimum, and it is checked at creation only — it is not an escrow, and callbacks spend from the
-   same balance afterwards. See D-017.
+K9 resolved: the submission window is open and closes 2026-09-11. K10 fired at the same moment and
+its cut is recorded in D-021.
 
 ## P2 stop boundary
 
-G3 (a live sample delivered by the reactivity path), G4 (a recorded breach) and G11 (handler funding
-proven on chain, with cost per sample published). One market only. No UI beyond a raw sample list.
+G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
 
-None of the three has been approached: no sample has been written by Assize, no breach recorded, no
-subscription created.
+## What remains, in K10's protected order
+
+1. **G7** — a stranger reaching the live evidence and re-deriving one breach from the README alone.
+   `DEPLOYMENT.md` carries copy-pasteable commands that need no account and no API key.
+2. **G9** — three first-time users completing the core action unaided. Needs a UI, and needs people.
+3. **G12** — submission package: README to the five beats, demo video, feedback report.
+
+Not attempted, and not to be claimed: G5 (payout) and G6 (a sustained 24h campaign).
 
 ## Stop boundary
 

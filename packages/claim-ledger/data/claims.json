@@ -18,7 +18,7 @@
     {
       "id": "C-001",
       "claim": "A breach is recorded only from a stored, block-pinned sample.",
-      "rung": "R1",
+      "rung": "R2",
       "target_rung": "R4",
       "gate": "G2",
       "evidence": [
@@ -39,6 +39,13 @@
           "description": "Under arbitrary sequences of publish and sample calls, breaches never outnumber samples, and every forfeiture names a breach that exists and belongs to that commitment.",
           "command": "forge test --match-path contracts/test/BondConservation.t.sol",
           "recordedAt": "2026-09-10"
+        },
+        {
+          "rung": "R2",
+          "description": "Demonstrated on chain: every sample the registry stored carries a non-zero block number and a non-zero block hash, and every breach recorded points at one of them. recordSample rejects an unpinned or unlabelled sample before storing it, so a breach cannot exist without a stored, block-pinned sample behind it.",
+          "txHash": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
+          "command": "pnpm evidence:report",
+          "recordedAt": "2026-09-10"
         }
       ],
       "verified_by": "pnpm test:differential"
@@ -46,28 +53,52 @@
     {
       "id": "C-002",
       "claim": "A third party with no access to our systems can re-derive a recorded verdict from chain alone.",
-      "rung": "R0",
+      "rung": "R2",
       "target_rung": "R4",
       "gate": "G7",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R2",
+          "description": "`pnpm claim:verify` reads each stored sample and its stored commitment from a public Somnia RPC, re-derives the verdict with packages/reference \u2014 a second implementation, in a different language, running locally \u2014 and compares it against what the registry returns. 25 of 25 samples checked agreed. It never asks the registry what it thinks the verdict is and then believes it: asking verdictOf alone would only prove the contract agrees with itself. No account, no API key and no access to our systems is involved.",
+          "txHash": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
+          "command": "SOMNIA_RPC_URL=<public rpc> ASSIZE_REGISTRY_ADDRESS=<see DEPLOYMENT.md> pnpm claim:verify",
+          "recordedAt": "2026-09-10"
+        }
+      ],
       "verified_by": "assize verify <breachId>"
     },
     {
       "id": "C-003",
       "claim": "Samples were delivered by the Somnia reactivity path on a live market.",
-      "rung": "R0",
+      "rung": "R2",
       "target_rung": "R3",
       "gate": "G3",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R2",
+          "description": "Somnia validators invoked CoverageSubscriber.onEvent on Shannon testnet and the handler wrote block-pinned samples labelled source: REACTIVITY against a live DreamDEX event contract market. The callback is a reactive transaction: from and to are both the subscriber, msg.sender inside the call is the precompile at 0x0100, and the nonce is the block-unique reactivity nonce the pinned reference describes. 1132 samples across 84 distinct blocks at the time of writing.",
+          "txHash": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
+          "command": "cast tx 0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf --rpc-url https://dream-rpc.somnia.network",
+          "recordedAt": "2026-09-10"
+        }
+      ],
       "verified_by": "pnpm verify:testnet -- C-003"
     },
     {
       "id": "C-004",
       "claim": "A real quoting breach was recorded against a live DreamDEX event contract market.",
-      "rung": "R0",
+      "rung": "R2",
       "target_rung": "R2",
       "gate": "G4",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R2",
+          "description": "A quoting breach was recorded against live DreamDEX market 0x...18bb8. The maker committed to a maximum spread of 15000 raw price units and posted a 1 STT bond; the sampled book showed bid 686000 against ask 714000, a spread of 28000, and the stored sample re-derives to SPREAD_BREACH from chain alone. The bond is recorded as forfeited at breach 0. The maker is our own baseline and is labelled PROJECT_BASELINE: this is not adoption and is not demand.",
+          "txHash": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
+          "command": "see DEPLOYMENT.md 'Verify it yourself' \u2014 cast call <AssizeRegistry> \"verdictOf(uint256)(uint8)\" 0",
+          "recordedAt": "2026-09-10"
+        }
+      ],
       "verified_by": "pnpm verify:testnet -- C-004"
     },
     {

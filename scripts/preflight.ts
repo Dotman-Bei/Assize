@@ -26,10 +26,15 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SUBSCRIPTION_OWNER_MINIMUM_BALANCE = 32n * 10n ** 18n;
 const MINIMUM_BASE_FEE_PER_GAS = 6n * 10n ** 9n;
 
-/** Measured: `onEvent` costs at most 254,574 gas against a fixture pool. A real
- * `getBookLevels` read costs more, so the recommended limit carries headroom.
- * Re-measure after the first live invocation and publish it — gate G11. */
-const RECOMMENDED_GAS_LIMIT = 1_000_000n;
+/**
+ * Measured against a LIVE pool with `cast estimate`: 2,730,154 gas.
+ *
+ * The same handler costs 254,574 against a test fixture, and a limit set from
+ * that number made every callback run out of gas — charged, and writing nothing
+ * (DECISIONS.md D-022). Re-estimate against the pool actually being sampled
+ * rather than reusing this constant; G11 requires publishing the cost per sample.
+ */
+const RECOMMENDED_GAS_LIMIT = 6_000_000n;
 
 /** Enough samples for gate G6, at the recommended limit. */
 const CAMPAIGN_SAMPLES = 300n;

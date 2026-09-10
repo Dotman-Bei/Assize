@@ -26,7 +26,11 @@ contract FundingConstantsTest is Test {
         );
         // The recommended gasLimit must stay inside what a subscription may ask
         // for, and clear of the default that would raise the balance floor.
-        assertLe(uint256(1_000_000), uint256(SomniaExtensions.MAXIMUM_HANDLER_GAS_LIMIT));
-        assertLt(uint256(1_000_000), uint256(SomniaExtensions.DEFAULT_HANDLER_GAS_LIMIT));
+        // 6,000,000 is set from a live estimate of 2,730,154 (DECISIONS.md D-022),
+        // not from this repository's fixture, which measures a tenth of that.
+        assertLe(uint256(6_000_000), uint256(SomniaExtensions.MAXIMUM_HANDLER_GAS_LIMIT));
+        assertLt(uint256(6_000_000), uint256(SomniaExtensions.DEFAULT_HANDLER_GAS_LIMIT));
+        // The live measurement must fit inside the limit, with headroom.
+        assertLt(uint256(2_730_154), uint256(6_000_000));
     }
 }

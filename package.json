@@ -22,7 +22,8 @@
     "probe:all": "tsx scripts/probe-all.ts",
     "lint:contracts": "forge lint contracts/src",
     "skills:verify": "tsx scripts/skills-verify.ts",
-    "preflight": "tsx scripts/preflight.ts"
+    "preflight": "tsx scripts/preflight.ts",
+    "evidence:report": "tsx scripts/evidence-report.ts"
   },
   "devDependencies": {
     "@assize/protocol-types": "workspace:*",

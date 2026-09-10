@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./src/verify.ts",
   "dependencies": {
-    "@assize/protocol-types": "workspace:*"
+    "@assize/protocol-types": "workspace:*",
+    "@assize/reference": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.2"

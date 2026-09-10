@@ -232,6 +232,38 @@ contract CoverageSubscriberTest is Test {
         subscriber.subscribe(topics, _defaultOptions());
     }
 
+    /* ------------------------- funding ----------------------------------- */
+
+    /// @notice The contract can actually be funded by a transfer.
+    ///
+    /// @dev Every other test funds it with `vm.deal`, which writes a balance
+    /// directly and never performs a transfer. That proved the contract could
+    /// hold a balance, not that anyone could give it one — and the first
+    /// deployment shipped without a `receive()`, so the transfer meant to fund it
+    /// reverted on chain. This asserts the property that was actually missing.
+    function test_can_be_funded_by_a_plain_transfer() public {
+        uint256 before = address(subscriber).balance;
+        vm.deal(address(this), 40 ether);
+        (bool ok,) = address(subscriber).call{value: 40 ether}("");
+        assertTrue(ok, "a plain transfer to the subscriber must succeed");
+        assertEq(address(subscriber).balance, before + 40 ether);
+    }
+
+    function test_only_the_funder_may_sweep() public {
+        vm.deal(address(subscriber), 5 ether);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(CoverageSubscriber.NotFunder.selector, stranger));
+        subscriber.sweep(payable(stranger));
+
+        // This test contract deployed the subscriber, so it is the funder.
+        uint256 before = address(this).balance;
+        subscriber.sweep(payable(address(this)));
+        assertEq(address(subscriber).balance, 0);
+        assertEq(address(this).balance, before + 5 ether);
+    }
+
+    receive() external payable {}
+
     /* ------------------------- sampling ---------------------------------- */
 
     function test_sample_carries_the_book_and_is_labelled_reactivity() public {
