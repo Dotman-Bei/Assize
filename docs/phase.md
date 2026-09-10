@@ -1,12 +1,28 @@
 # Current phase
 
-**Phase: P1. Status: COMPLETE. G1 and G2 both pass.**
+**Phase: P2. Status: in progress, not deployed. P1 is COMPLETE — G1 and G2 both pass.**
 
 Updated 2026-09-10. Both gates in P1's stop boundary are met, so nothing in P1 blocks a move to P2.
 
-P2 is not started. Its first act is a deployment, and PRD §26 K9 is an open `OWNER DECISION` about
-whether the submission path continues at all. Deploying is cheap to do and awkward to undo, so the
-phase advances on the owner's word rather than on this file's.
+P2's code is written and tested: `CoverageSubscriber.sol`, the pool interface it samples through,
+and `contracts/script/Deploy.s.sol`. **Nothing has been deployed**, and the deployment is not blocked
+on code. It is blocked on three things the owner holds:
+
+1. **K9 (`OWNER DECISION`)** — whether the submission path continues at all.
+2. **A funded key.** AGENTS.md §0.6: secrets and testnet funds are the owner's to supply, and no key
+   is ever printed, logged or committed.
+3. **Testnet funds, in a specific amount.** The bond, plus the subscriber's minimum owner balance,
+   plus a per-callback gas budget. The pinned reactivity library refuses to subscribe below the
+   minimum, and it is checked at creation only — it is not an escrow, and callbacks spend from the
+   same balance afterwards. See D-017.
+
+## P2 stop boundary
+
+G3 (a live sample delivered by the reactivity path), G4 (a recorded breach) and G11 (handler funding
+proven on chain, with cost per sample published). One market only. No UI beyond a raw sample list.
+
+None of the three has been approached: no sample has been written by Assize, no breach recorded, no
+subscription created.
 
 ## Stop boundary
 

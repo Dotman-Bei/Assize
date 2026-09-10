@@ -11,6 +11,9 @@ importers:
       '@somnia-chain/markets-sdk':
         specifier: 0.29.0
         version: 0.29.0(graphql@17.0.2)(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
+      '@somnia-chain/reactivity-contracts':
+        specifier: 0.2.1
+        version: 0.2.1
     devDependencies:
       '@assize/protocol-types':
         specifier: workspace:*
@@ -529,6 +532,9 @@ packages:
         optional: true
       react:
         optional: true
+
+  '@somnia-chain/reactivity-contracts@0.2.1':
+    resolution: {integrity: sha512-5F+whWQz9nTvP/3Mml/NZqF2+SBDHR6GZ1EEeZQlqpvnltNzA3y0y6gfm7axWIKBTuXcPgToYOF7TX6C4LoUbA==}
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
@@ -1078,6 +1084,8 @@ snapshots:
       viem: 2.56.3(typescript@5.9.3)(zod@3.25.76)
     transitivePeerDependencies:
       - graphql
+
+  '@somnia-chain/reactivity-contracts@0.2.1': {}
 
   '@types/estree@1.0.9': {}
 

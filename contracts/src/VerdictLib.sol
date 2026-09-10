@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
 /// @notice Raised when {VerdictLib.isBreach} meets a state outside the seven in
 /// {VerdictState}. Unreachable today; it exists so that adding a state cannot be

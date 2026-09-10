@@ -303,3 +303,78 @@ The reactivity reference warns that a handler's own logs are matched against sub
 subscription can feed itself and drain the owner's balance. Assize's subscriber emits
 `SampleRecorded` when it writes a sample. The P2 filter must exclude the registry's own address, and
 a test must prove it. Written down now so P2 meets it as a requirement rather than as an incident.
+
+---
+
+## 2026-09-10 — Phase P2 code: the reactivity handler, written and tested, not deployed
+
+**Outcome.** `CoverageSubscriber.sol` and its deploy script exist and pass 13 tests. **Nothing has
+been deployed and no sample has been written.** The deployment is not blocked on code; it is blocked
+on K9, a funded key, and testnet funds — all of which are the owner's to supply (AGENTS.md §0.6).
+
+### Files
+
+```
+contracts/src/CoverageSubscriber.sol          the reactivity handler (Path R)
+contracts/src/interfaces/IBinaryPool.sol      only what Assize reads: getBookLevels
+contracts/script/Deploy.s.sol                 P2 deployment, not run
+contracts/test/CoverageSubscriber.t.sol       13 tests
+foundry.toml                                  solc 0.8.30, remappings, allow_paths
+```
+
+`solc` moved 0.8.28 to 0.8.30: the pinned `@somnia-chain/reactivity-contracts` declares
+`pragma solidity 0.8.30` exactly, so `SomniaEventHandler` will not compile under 0.8.28.
+
+### The access control is inherited, and that is the point
+
+`SomniaEventHandler.onEvent` requires `msg.sender == SOMNIA_REACTIVITY_PRECOMPILE_ADDRESS` before it
+calls `_onEvent`, and the pinned reference confirms a reactive transaction executes with exactly that
+`msg.sender`. PRD §12's spoofed-callback row is satisfied by upstream's own check rather than by one
+written here — which is what §0.4 asks for. It is asserted anyway, because it is the property the
+whole path rests on.
+
+### Two things found by testing rather than by deploying
+
+1. **The subscriber needs a minimum balance before it can subscribe at all.** The pinned library
+   refuses below `SUBSCRIPTION_OWNER_MINIMUM_BALANCE`, and the owner is the subscriber contract
+   itself. This appeared as `InsufficientBalance()` in a test. It is a real operational cost for P2 —
+   funding to subscribe, then more funding to pay per-callback gas — and it is now held in place by
+   `test_subscribing_requires_the_minimum_owner_balance`.
+2. **A first attempt at the filter test asserted nothing.** It built a `SubscriptionFilter` locally
+   and made assertions about that, never about what the contract sent. `vm.etch` cannot stand a
+   recorder at the precompile — foundry refuses addresses in that range — so the test now uses
+   `vm.expectCall` with the exact `SubscriptionData`, which is stricter than recording: any deviation
+   in any field fails it.
+
+### Negative controls
+
+- **Wildcard emitter injected** (the recursion the reference warns about, where a handler's own logs
+  feed its subscription and drain the prefund): caught by the contract's own guard,
+  `FilterWouldMatchOurselves()`, before the assertion was even reached.
+- **Truncation instead of revert on an oversized book value**: caught. Reverting beats truncating
+  here — a truncated size is a silently wrong sample, and a wrong sample recorded as a breach is the
+  incident K6 exists to stop. A revert is a missing sample, which is `NOT_SAMPLED`: visible, counted,
+  never mistaken for coverage.
+
+### Commands
+
+```
+forge build                  exit 0
+forge test                   exit 0   50 passed, 1 skipped, 6 suites
+pnpm test:differential (G2)  exit 0   unchanged
+pnpm probe:all         (G1)  exit 0   unchanged, against live Shannon
+pnpm check:vocabulary        exit 1 -> exit 0 after rewording one comment ("safe")
+```
+
+### Design decisions this forced
+
+- **D-016**: a reactivity sample pins its block's *parent* hash, because no contract can observe its
+  own block's hash. The verifier must check `getBlock(n).parentHash == sample.blockHash`, and the
+  field named `blockHash` therefore holds a parent hash — a naming trap that PRD §5.2 prevents fixing.
+- **D-017**: registry and subscriber are wired by address prediction rather than a setter, because a
+  settable subscriber would be an admin path to redirect who may write samples.
+
+### Not done
+
+No subscription created, no sample written, no breach recorded against a live market. G3, G4 and G11
+are all untouched.

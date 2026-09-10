@@ -426,3 +426,70 @@ balance". Assize's subscriber writes samples, and writing a sample emits `Sample
 event ever matches Assize's own filter the loop is self-feeding and drains the handler prefund. The
 P2 filter must exclude the registry's own address, and a test must prove it. Recorded here so that
 P2 meets it as a requirement rather than as an incident.
+
+---
+
+## D-016: A reactivity sample pins its block's parent hash, because no contract can see its own
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Evidence.** PRD §6 rests the whole trust argument on block pinning: "a stranger can re-read the
+book at that block and check the values we wrote", and PRD §12's reorg row rejects a sample whose pin
+no longer resolves. `AssizeRegistry` enforces it by refusing a sample whose `blockHash` is zero.
+
+A handler running inside block N cannot obtain block N's hash — the hash does not exist until the
+block is sealed, and `blockhash(block.number)` returns zero. So a `REACTIVITY` sample cannot pin its
+own block's hash, and the choice is between pinning something else or not pinning at all.
+
+`CoverageSubscriber` stores `blockNumber = N` and `blockHash = blockhash(N - 1)`, the parent hash. A
+verifier checks `getBlock(blockNumber).parentHash == sample.blockHash`. That identifies block N on
+the canonical chain exactly as tightly as its own hash would: a reorg that replaces block N replaces
+its parent linkage too, so the check fails in the same cases.
+
+**Cost, and it is real.** Two things a reader could reasonably assume are not true.
+
+First, the field is named `blockHash` and holds a parent hash. PRD §5.2 fixes the field name and
+PRD §0.3 forbids changing a struct layout, so it cannot be renamed. Any surface that shows it must
+label it for what it is, and `packages/verifier` must check it as a parent hash. Wrong on this point
+and the verifier rejects every honest sample.
+
+Second, the handler runs as a synthetic transaction after the block's user transactions, so the book
+it reads is block N's state at that moment. A verifier calling `getBookLevels` at block N reads block
+N's *final* state. Those agree unless another reactive transaction in the same block moved the book
+between the two. Assize never trades, so it cannot cause that itself, but it cannot rule it out for
+others. This belongs in `WHAT_IS_MEASURED.md` before any breach is published: a sample is a reading
+at a position inside a block, not a reading of the block's closing state.
+
+---
+
+## D-017: Registry and subscriber are wired by address prediction, not by a setter
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Evidence.** `AssizeRegistry` takes its subscriber in the constructor as an immutable, and
+`CoverageSubscriber` takes its registry the same way. Each needs the other's address, so one must be
+known before it exists.
+
+The alternative was a setter on one of them. It was rejected: PRD §10 allows the owner to register a
+keeper "and nothing else", and a settable subscriber is an admin path to redirect who may write
+samples — which is the authority the whole measurement rests on. Better to make deployment slightly
+awkward than to leave a lever that can move sampling after the fact.
+
+So the deploy script computes the subscriber's address before deploying the registry, which `CREATE`
+makes deterministic from the deployer and its nonce, and then asserts the prediction held.
+A mis-prediction fails the deployment instead of producing a registry no subscriber can write to.
+
+**A funding requirement found by test, not by deployment.** The pinned library refuses to subscribe
+unless the subscription owner already holds `SUBSCRIPTION_OWNER_MINIMUM_BALANCE`, and the owner is
+the subscriber contract itself. So the subscriber must be funded from the faucet before it can
+subscribe at all, and funded again to pay per-callback gas afterwards — the reference is explicit
+that the minimum is checked only at creation and is not an escrow. This surfaced as
+`InsufficientBalance()` in a test rather than as a failed testnet transaction, and
+`test_subscribing_requires_the_minimum_owner_balance` now holds it in place.
+
+**Cost.** The deployer needs meaningful testnet funds before anything can be measured: the bond, the
+subscriber's minimum balance, and a per-callback gas budget, on top of ordinary deployment gas.
+PRD §26 K8 governs if the faucet cannot supply it — shrink the window, publish exactly what the
+funding bought, and never present a shortened window as a full one.

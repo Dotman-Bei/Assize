@@ -5,7 +5,16 @@ test = "contracts/test"
 script = "contracts/script"
 out = "out"
 libs = ["contracts/lib"]
-solc_version = "0.8.28"
+remappings = [
+    "forge-std/=contracts/lib/forge-std/src/",
+    "@somnia-chain/reactivity-contracts/=node_modules/@somnia-chain/reactivity-contracts/",
+]
+# The reactivity package is resolved out of node_modules rather than vendored, so
+# forge needs read access to it. Pinned in skills-lock.json at 0.2.1.
+allow_paths = ["node_modules"]
+# 0.8.30: the pinned @somnia-chain/reactivity-contracts declares `pragma solidity
+# 0.8.30` exactly, so SomniaEventHandler cannot compile under 0.8.28.
+solc_version = "0.8.30"
 optimizer = true
 optimizer_runs = 200
 # PRD §13: strict. The compiler must emit no warnings. The style linter is run
