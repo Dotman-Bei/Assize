@@ -1017,3 +1017,9 @@ Negative-controlled: removing the empty-state copy and the faucet links failed e
 checks and left the other four passing.
 
 It runs against `dist/assize.html` rather than the dev server, for the reason in D-037.
+
+**Correction to the entry above.** That commit landed with `check:paths` failing. `scripts/e2e.mjs`
+carried `/root/.cache/ms-playwright/…` as the browser path, which AGENTS.md forbids in any tracked
+file and which would have worked on exactly one machine. The gate caught it; I committed before
+reading the gate output, which is the actual mistake. The browser is now discovered from the home
+directory, with `CHROME_PATH` as an override and Playwright's own resolution as the fallback.

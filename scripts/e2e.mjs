@@ -13,15 +13,34 @@
  */
 import { chromium } from "playwright";
 import { dirname, join } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { chainDouble } from "./e2e/chain-double.mjs";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP = join(REPO_ROOT, "apps", "web", "dist", "assize.html");
-const CHROME = process.env.CHROME_PATH
-  ?? "/root/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome";
+/**
+ * Where Playwright keeps its browsers, discovered rather than written down.
+ * AGENTS.md forbids an absolute developer path in a tracked file, and one here
+ * would only have worked on the machine it was written on.
+ */
+function findChromium() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const cache = join(homedir(), ".cache", "ms-playwright");
+  if (!existsSync(cache)) return undefined;
+  for (const entry of readdirSync(cache).filter((d) => d.startsWith("chromium"))) {
+    for (const candidate of [
+      join(cache, entry, "chrome-linux64", "chrome"),
+      join(cache, entry, "chrome-linux", "chrome"),
+      join(cache, entry, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
+    ]) {
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return undefined;   // let Playwright fall back to its own resolution
+}
 
 /** A wallet that answers, so the funding states can be reached without a real one. */
 const FAKE_WALLET = `
@@ -53,7 +72,11 @@ async function main() {
     process.stderr.write(`No built app at ${APP}. Run: pnpm --filter @assize/web build:single\n`);
     process.exit(2);
   }
-  const browser = await chromium.launch({ executablePath: CHROME, args: ["--no-sandbox"] });
+  const executablePath = findChromium();
+  const browser = await chromium.launch({
+    ...(executablePath === undefined ? {} : { executablePath }),
+    args: ["--no-sandbox"],
+  });
   process.stdout.write("\ntest:e2e — every state reachable (PRD §22 G10)\n\n");
 
   // 1. Loading. The page must say it is reading rather than showing nothing.
