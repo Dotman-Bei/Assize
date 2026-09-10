@@ -53,11 +53,11 @@ const S = { one: 1_000_000n, commitments: [], samples: [], filter: "all", q: "",
    does and does not do. The second half is ours: PRD §21 forbids a claim that
    outruns its evidence, and step 5 does not exist in this deployment. */
 const LIFECYCLE = [
-  ["Maker posts an envelope", "Max spread, min depth, window and bond, published on chain and backed by escrowed STT.", "Live."],
-  ["Reactivity detects the book", "Somnia's precompile invokes the handler when the market emits. Validators drive it; we do not.", "Live."],
-  ["Registry evaluates the verdict", "verdict = f(commitment, sample), pure and total over seven enumerated states, computed from stored data alone.", "Live."],
-  ["Breach forfeits the bond", "A breach records the sample that caused it and marks the bond forfeited, on chain.", "Live."],
-  ["Traders claim pro-rata", "Witnessed traders would claim forfeited capital in proportion to volume the registry saw.", "Not deployed."],
+  ["Commitment + bond", "escrowed in the registry", true],
+  ["Book event", "on a DreamDEX event contract", true],
+  ["Reactive sample", "written by Somnia validators", true],
+  ["Deterministic verdict", "computed from stored data alone", true],
+  ["Settlement", "not deployed in this build", false],
 ];
 
 async function boot() {
@@ -237,15 +237,16 @@ function renderTelemetry() {
 }
 
 function renderLifecycle() {
-  $("#lifecycle").innerHTML = LIFECYCLE.map(([title], i) => `
-    <div class="stepcard" data-step="${i}" aria-current="${i === S.step}">
-      <div class="stepnum">STEP ${i + 1}</div><h3>${title}</h3></div>`).join("");
-  paintIcons();
-  const [title, body, status] = LIFECYCLE[S.step];
-  const live = status === "Live.";
-  $("#lifecycleDetail").innerHTML = `<div class="note ${live ? "" : "amber"}" style="margin-top:var(--s-3)">
-    <strong>${title}.</strong> ${body} <strong>${status}</strong>
-    ${live ? "" : " The payout path was cut under this project's kill criteria when the submission window got short. A bond is recorded as forfeited and no trader is paid, because the code that would pay them is not deployed."}</div>`;
+  $("#lifecycle").innerHTML = LIFECYCLE.map(([label, qualifier, live]) => `
+    <div class="how-cell">
+      <div class="how-label${live ? "" : " off"}">${label}</div>
+      <div class="how-qualifier">${qualifier}</div>
+    </div>`).join("");
+  // The fifth step is the one that needs saying out loud rather than implying.
+  $("#lifecycleDetail").innerHTML = `<div class="note amber" style="margin-top:var(--s-3)">
+    <strong>Settlement is designed and not deployed.</strong> The payout path was cut under this
+    project's own kill criteria when the submission window got short. A bond is recorded as forfeited
+    and no trader is paid, because the code that would pay them is not in this deployment.</div>`;
 }
 
 function renderBoundaries() {

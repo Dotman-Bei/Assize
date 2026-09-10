@@ -1127,3 +1127,31 @@ load" rather than continuing to claim verification against a chain nobody talked
 screen and now lives at the end of the document, which is where a reader arrives last if at all. The
 boundaries box on the Overview page carries the same points, so the information is not lost, but it
 is less insistent than §2 made it.
+
+---
+
+## D-039: "How it works" replaces the lifecycle section, and section headings take its size
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction
+
+**Evidence.** The owner supplied a reference showing a compact strip: a heading, then a row of cells
+each carrying a bold label over a muted qualifier, divided by hairlines. The previous section, "The
+deterministic protocol lifecycle", was five clickable step cards with a detail panel that changed
+underneath them. It is replaced.
+
+Section headings across the app take the size of that reference heading: `h2` moves from 15px/500 to
+22px/600. They had been smaller than the body copy they introduced in several places, which read as
+a mistake rather than as restraint.
+
+**What was preserved through the rewrite.** The compact format has room for a label and four or five
+words, and the fifth step is the one that cannot be said in four words: settlement is designed and
+not deployed. Its qualifier reads "not deployed in this build", its label is muted rather than white,
+and its qualifier is set in `--verdict-spread-breach` so it does not blend into the four beside it.
+The full explanation sits in a note directly below the strip. Losing that would have made the strip
+imply a five-step process that completes, which is the one thing the page must not imply.
+
+**Cost.** The per-step detail is gone. Four of the five steps had a sentence explaining what they do
+and do not do, and those sentences are no longer anywhere on the page. The Overview's own cards and
+the boundaries box cover the same ground less directly. If a reader wanted to know what "Deterministic
+verdict" means in detail, the page no longer tells them; the Verifier tab does, by running it.

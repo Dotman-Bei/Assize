@@ -104,8 +104,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-5); }
 h1 { font-size: 52px; line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; margin: var(--s-6) auto 0; max-width: 18ch; }
 .hero p { color: var(--text-secondary); font-size: 16px; line-height: 1.65; max-width: 620px; margin: var(--s-5) auto 0; }
 .hero-cta { display: flex; gap: var(--s-2); justify-content: center; margin-top: var(--s-8); flex-wrap: wrap; }
-h2 { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 var(--s-1); }
-.h2-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 var(--s-4); line-height: 1.6; }
+h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 var(--s-2); }
+.h2-sub { color: var(--text-muted); font-size: 14px; margin: 0 0 var(--s-4); line-height: 1.6; }
 .page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 var(--s-2); }
 
 /* ── cards: hairline, no shadow, no elevation ─────────────────────────────── */
@@ -253,6 +253,13 @@ td.n { font-family: var(--font-mono); color: var(--text-primary); font-variant-n
 .gauge > span { display: block; height: 100%; background: var(--verdict-covered); }
 .gauge.low > span { background: var(--verdict-spread-breach); }
 .gauge.crit > span { background: var(--verdict-absent); }
+
+/* ── "How it works" cells: a label over a muted qualifier, nothing else ────── */
+.how-cell { padding: var(--s-4) var(--s-5); }
+.how-label { font-size: 14.5px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+.how-label.off { color: var(--text-secondary); }
+.how-qualifier { font-size: 14px; color: var(--text-secondary); margin-top: 5px; }
+.how-label.off + .how-qualifier { color: var(--verdict-spread-breach); }
 
 /* ── §3 Page 4 lifecycle steps ────────────────────────────────────────────── */
 .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-2); }

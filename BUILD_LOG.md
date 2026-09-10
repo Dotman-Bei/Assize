@@ -918,3 +918,23 @@ nothing verified this load" instead of continuing to claim a chain nobody reache
 One cost worth noting: the disclosure was pinned in view on every screen and now sits at the end of
 the document. The Overview boundaries box carries the same points, so nothing is lost, but it is less
 insistent than §2 made it.
+
+---
+
+## 2026-09-10 — "How it works", and a heading scale that was too small
+
+Replaced the lifecycle section with the supplied compact strip: bold label over a muted qualifier,
+five cells, hairline dividers. Section headings across the app take that heading's size, `h2` moving
+15px/500 to 22px/600 — they had been smaller than the body copy they introduced, which read as an
+error rather than as restraint.
+
+The fifth cell is the reason this needed care. "Settlement" carries "not deployed in this build", its
+label muted rather than white and its qualifier in the amber token, with the full explanation in a
+note beneath. Without that the strip would imply a five-step process that completes, which is the one
+thing this page must not imply.
+
+Verified against the built file: h2 computes to 22px/600, five cells render with the expected label
+and qualifier pairs, the fifth is flagged, no console errors, no overflow at 390/768/1440. D-039.
+
+The per-step detail panel is gone with the interaction, and that is a real loss recorded in D-039:
+four steps had sentences explaining what they do and do not do, and those are no longer on the page.
