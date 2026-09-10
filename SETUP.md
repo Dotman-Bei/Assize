@@ -16,6 +16,20 @@ ASSIZE_REGISTRY_ADDRESS=<see DEPLOYMENT.md> \
 It reads every stored sample and commitment from the public RPC and re-derives each verdict locally
 with `packages/reference`, then compares against the chain.
 
+## Look at it
+
+```sh
+pnpm --filter @assize/web build:single    # one self-contained file
+open apps/web/dist/assize.html            # or just double-click it
+```
+
+`assize.html` inlines its stylesheet, its bundle and the deployment record, so it needs no server at
+all. It still reads the chain: Somnia's RPC sends `access-control-allow-origin: *` on both the call
+and the preflight, so a page with a `file://` origin can query it.
+
+`pnpm --filter @assize/web dev` serves the same thing on `localhost:5173` with a rebuild watcher —
+useful when editing, useless for sharing.
+
 ## Run the checks
 
 ```sh

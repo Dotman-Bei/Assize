@@ -47,7 +47,10 @@ const bpsOfOne = (raw, oneCollateral) => (oneCollateral > 0n ? (raw * 10_000n) /
 let state = { config: null, client: null, commitment: null, samples: [], oneCollateral: 1_000_000n };
 
 async function boot() {
-  const record = await (await fetch("./deployment.json")).json();
+  // Served build fetches the record; the single-file build has it inlined by
+  // build.mjs. Either way it arrives at runtime and never sits in source (§17).
+  const record = globalThis.__ASSIZE_DEPLOYMENT__
+    ?? await (await fetch("./deployment.json")).json();
   const rpcUrl = new URLSearchParams(location.search).get("rpc") ?? record.rpcUrl;
   state.config = record;
   state.client = createPublicClient({ transport: http(rpcUrl) });

@@ -35,7 +35,27 @@ const options = {
   minify: !process.argv.includes("--serve"),
 };
 
-if (process.argv.includes("--serve")) {
+if (process.argv.includes("--single")) {
+  // One file, no server, no network except the RPC. Open it by double-clicking.
+  // Somnia's RPC sends `access-control-allow-origin: *` on both the call and the
+  // preflight, so a page with a `null` file:// origin can still read the chain.
+  await build({ ...options, minify: true, outfile: join(dist, "_inline.js") });
+  const js = readFileSync(join(dist, "_inline.js"), "utf8");
+  const css = readFileSync(join(here, "src", "styles.css"), "utf8");
+  const record = readFileSync(join(dist, "deployment.json"), "utf8");
+  // Replacements are passed as FUNCTIONS on purpose. A minified bundle contains
+  // `$&` and `$'` sequences, and String.replace interprets those inside a
+  // replacement *string* — which silently re-inserted the very <script src>
+  // tag being replaced, three times. A replacer function disables that.
+  const html = readFileSync(join(here, "src", "index.html"), "utf8")
+    .replace('<link rel="stylesheet" href="./styles.css">', () => `<style>\n${css}\n</style>`)
+    .replace(
+      '<script type="module" src="./app.js"></script>',
+      () => `<script>globalThis.__ASSIZE_DEPLOYMENT__ = ${record};</script>\n<script type="module">\n${js}\n</script>`,
+    );
+  writeFileSync(join(dist, "assize.html"), html);
+  process.stdout.write(`built ${join(dist, "assize.html")}\n`);
+} else if (process.argv.includes("--serve")) {
   const ctx = await context(options);
   await ctx.watch();
   const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json" };

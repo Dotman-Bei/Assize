@@ -783,3 +783,32 @@ that reaching all seven is shown by the differential rather than by this run.
 **Cost.** A general one, worth writing down: every number in a document about a live system has a
 shelf life. `pnpm evidence:report` regenerates the counts from chain, and any figure quoted by hand
 should be re-read from it before submission rather than trusted because it was true once.
+
+---
+
+## D-028: The app ships as one self-contained file as well as a served bundle
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted
+
+**Evidence.** A dev server on `localhost` is reachable only from the machine running it. For anyone
+who is not on that machine — a judge, a reviewer, the owner of this project — it is not a way to see
+anything, and offering it as one wastes their time.
+
+Somnia's RPC answers with `access-control-allow-origin: *` on both the call and the preflight, which
+means a page loaded from a `file://` origin can read the chain directly. So `pnpm --filter
+@assize/web build:single` inlines the stylesheet, the bundle and the deployment record into one HTML
+file that works by double-clicking, with no server and no install.
+
+That is not a fallback. It is the strongest form of the product's own argument: the page has no
+backend to trust, and now visibly cannot have one.
+
+**Cost.** The single file is around 320KB, most of it the bundled RPC client, and it must be rebuilt
+when the deployment record changes because the record is inlined. The served build remains for
+development.
+
+**A bug worth recording.** The first single-file build silently kept its `<script src>` tag and three
+copies of it. `String.prototype.replace` interprets `$&` and `$'` inside a replacement *string*, and
+a minified bundle is full of both — so the bundle's own text re-inserted the tag it was replacing.
+Passing the replacement as a function disables that interpretation. The symptom was a page that
+looked built and rendered nothing, and the console error named CORS rather than the real cause.

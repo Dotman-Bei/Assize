@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "dev": "node build.mjs --serve"
+    "dev": "node build.mjs --serve",
+    "build:single": "node build.mjs --single"
   },
   "dependencies": {
     "@assize/protocol-types": "workspace:*",

@@ -680,3 +680,32 @@ pnpm check:vocabulary                exit 0
 ### Not done
 
 The app is not hosted. A public URL needs a hosting account, which is the owner's to supply.
+
+---
+
+## 2026-09-10 — A build anyone can actually open
+
+`localhost:5173` is reachable only from the machine running it, which is not the owner's machine.
+Offering it was useless.
+
+`pnpm --filter @assize/web build:single` now inlines the stylesheet, the bundle and the deployment
+record into one HTML file that works by double-clicking. Somnia's RPC sends
+`access-control-allow-origin: *` on the call and the preflight, so a `file://` origin still reads the
+chain — verified in headless Chromium against `file:///…/assize.html`:
+
+```
+gas    : handler prefund: 13.39 STT
+latest : bid 405,000 · ask 434,000 · spread 29,000 raw · 290 bps · SPREAD_BREACH
+stream : 3 distinct blocks from the 40 most recent of 13,804 samples
+errors : none
+```
+
+### The bug in the inliner
+
+The first attempt produced a file that still loaded `./app.js` — three times. `String.replace`
+interprets `$&` and `$'` inside a replacement **string**, and a minified bundle contains plenty of
+both, so the bundle's own text kept re-inserting the tag being replaced. Passing the replacement as a
+function disables the interpretation.
+
+Worth remembering for the symptom as much as the cause: the page looked built, rendered nothing, and
+the console blamed CORS. D-028.
