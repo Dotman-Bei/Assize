@@ -933,3 +933,29 @@ infrastructure.
 creation, so re-subscribing needs the subscriber funded above 32 STT. The deployer holds 6.36 STT and
 the faucet allows one claim per 24 hours. Sampling cannot resume until the next claim. PRD §26 K8
 governs: publish exactly what the funding bought, and never present a shortened window as a full one.
+
+---
+
+## D-033: The nav's Faucet link and "+ Post Commitment" button are removed, against §2
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction
+
+**Evidence.** `frontend.md` §2 specifies three items under "Actions (Right aligned)": a Faucet link,
+a "+ Post Commitment" primary white button routing to `/publish`, and the wallet pill. The owner
+asked for the first two to be removed. Only the wallet pill remains.
+
+This is a deliberate departure from the design authority, recorded here rather than left to be
+discovered as drift. The document and the build now disagree on one line of §2, and this entry is
+the reason why.
+
+**Checked before removing.** Neither was load-bearing. `/publish` is still reachable from the Publish
+tab and from the hero's "Post a Commitment" CTA, both verified. The faucet is still offered where it
+is actually needed — the insufficient-funds state on the commitment studio, which §3 Page 3 and §4
+both require and which carries its own [Open Shannon Faucet] and [Join Somnia Telegram Community]
+buttons. Nothing is orphaned.
+
+**Cost.** A first-time user with an empty wallet no longer meets the faucet until they reach the
+publish form. That is later than §2 intended, and it is worth watching in the G9 user test: if
+someone stalls for want of testnet funds before they get that far, the link should come back
+somewhere earlier.

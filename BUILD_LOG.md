@@ -798,3 +798,16 @@ headless chromium, file:// origin, six routes                           console 
 horizontal overflow at 390 / 768 / 1440                                 none
 in-browser verifier against sample #0                                   PASS
 ```
+
+---
+
+## 2026-09-10 — Nav actions removed on request
+
+Removed the Faucet link and the "+ Post Commitment" button from the right of the nav, leaving the
+wallet pill. This departs from `frontend.md` §2, which specifies all three, and is recorded as D-033
+so the document and the build do not drift apart silently.
+
+Checked first that neither was load-bearing: `/publish` is still reachable from the Publish tab and
+the hero CTA, and the faucet still appears in the insufficient-funds state on the commitment studio,
+where §3 Page 3 and §4 both require it. Verified in the browser — both gone, both routes still work,
+no console errors, no overflow at 390, 768 or 1440.

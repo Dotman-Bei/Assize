@@ -10,6 +10,7 @@
 import { build, context } from "esbuild";
 import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { watch } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,6 +59,15 @@ if (process.argv.includes("--single")) {
 } else if (process.argv.includes("--serve")) {
   const ctx = await context(options);
   await ctx.watch();
+  // esbuild watches the JS graph only. index.html and styles.css are copied, not
+  // bundled, so without this an edit to either silently does nothing and the page
+  // keeps serving whatever was copied at startup.
+  for (const file of ["index.html", "styles.css"]) {
+    watch(join(here, "src", file), () => {
+      cpSync(join(here, "src", file), join(dist, file));
+      process.stdout.write(`rebuilt ${file}\n`);
+    });
+  }
   const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json" };
   const port = Number(process.env.PORT ?? 5173);
   const server = createServer((req, res) => {
