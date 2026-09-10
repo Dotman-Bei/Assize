@@ -68,8 +68,9 @@ async function boot() {
   S.registry = record.contracts.AssizeRegistry;
   S.subscriber = record.contracts.CoverageSubscriber;
   S.explorer = "https://shannon-explorer.somnia.network";
-  $("#footAddr").href = `${S.explorer}/address/${S.registry}`;
-  $("#footRepo").href = "#/verify";
+  $("#footExplorer").href = S.explorer;
+  $("#footRegistry").href = `${S.explorer}/address/${S.registry}`;
+  $("#footSubscriber").href = `${S.explorer}/address/${S.subscriber}`;
 
   wire();
   paintIcons();
@@ -186,7 +187,14 @@ async function loadHealth() {
     const floor = BigInt(S.cfg.measurement.handlerGasLimit ?? 0) * 6n * 10n ** 9n;
     S.prefund = { balance, floor, firings: floor > 0n ? balance / floor : 0n };
     $("#health").textContent = `Live on Shannon · ${id}`;
-  } catch { $("#health").textContent = "Shannon unreachable"; }
+    const verified = $("#footVerified");
+    if (verified) verified.textContent = `verified on Somnia Shannon · chain ${id}`;
+  } catch {
+    $("#health").textContent = "Shannon unreachable";
+    const verified = $("#footVerified");
+    // Never claim verification against a chain that could not be reached.
+    if (verified) verified.textContent = "Shannon unreachable, nothing verified this load";
+  }
 }
 
 async function loadChain() {

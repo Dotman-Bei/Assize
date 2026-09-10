@@ -885,3 +885,36 @@ So three earlier entries here that say "console errors: none" were true of what 
 and not of the source. D-037 records that rather than quietly amending them. Verification now runs
 against `dist/assize.html`, the artefact actually shipped. The dev server is for editing; it is not
 evidence.
+
+---
+
+## 2026-09-10 — Footer rebuilt as a site footer
+
+Replaced §2's pinned 48px bar with the supplied reference structure: brand column with descriptive
+copy, three link columns under uppercase headings (App, Network, Product), external-link arrows, a
+hairline, and a bottom row carrying the hackathon line left and a monospace verification line right.
+Third instructed departure from the document, after D-033 and D-036. D-038.
+
+All three strings §2 put in the bar survive. The disclosure was corrected on the way: §2 says
+"Payouts reach witnessed volume only", which implies payouts happen and none do. It now reads
+"No payout path is deployed: a forfeited bond is recorded, not distributed."
+
+Verified against the built file:
+
+```
+footer columns    App / Network / Product
+links per column  6, 4, 5
+external arrows   4
+verified line     verified on Somnia Shannon · chain 50312
+dead links        none
+position          static, in document flow
+console errors    none
+overflow          none at 390 / 768 / 1440
+```
+
+The verification line degrades honestly: with the RPC unreachable it reads "Shannon unreachable,
+nothing verified this load" instead of continuing to claim a chain nobody reached.
+
+One cost worth noting: the disclosure was pinned in view on every screen and now sits at the end of
+the document. The Overview boundaries box carries the same points, so nothing is lost, but it is less
+insistent than §2 made it.

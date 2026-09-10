@@ -1093,3 +1093,37 @@ serve something else. The dev server remains for editing; it is not evidence.
 **Cost.** Three earlier reports in `BUILD_LOG.md` say "console errors: none" for runs made against
 the stale watcher. Those statements were true of what was served and not of the source. They are not
 edited out, and this entry is what corrects them.
+
+---
+
+## D-038: The footer is a site footer, not the pinned bar §2 specifies
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction
+
+**Evidence.** `frontend.md` §2 specifies a "Global Footer Bar (Sticky/Pinned bottom, 48px height)"
+carrying three strings. The owner supplied a reference showing a document-flow site footer instead: a
+brand column with descriptive copy, three link columns under uppercase headings, a hairline, and a
+bottom row with a tagline left and a monospace verification line right. That is what is built. It is
+the third departure from the document taken on instruction, after D-033 and D-036.
+
+**All three of §2's strings survive**, because each carried something worth keeping:
+
+- "Assize Protocol · Somnia × DreamDEX Event Contracts Hackathon" is the bottom row, left.
+- The network facts and the repository, deployment and docs links are distributed across the Network
+  and Product columns, where each now has a heading explaining what it is.
+- The disclosure moved to the brand column and was **corrected**. §2's wording is "Payouts reach
+  witnessed volume only", which implies payouts happen. None do. It now reads "Samples at instants,
+  not continuously. No payout path is deployed: a forfeited bond is recorded, not distributed." Same
+  as D-031: where the document's copy would assert something untrue, the copy is not used.
+
+**Two things checked rather than assumed.** Every anchor in the footer resolves to a real
+destination, verified by asserting that none has a missing or `#` href, because a footer of dead
+links is the usual way this structure goes wrong. And the verification line reports the chain it
+actually reached; if the RPC is unreachable it reads "Shannon unreachable, nothing verified this
+load" rather than continuing to claim verification against a chain nobody talked to.
+
+**Cost.** The disclosure is no longer pinned in view at all times. It sat in a fixed bar on every
+screen and now lives at the end of the document, which is where a reader arrives last if at all. The
+boundaries box on the Overview page carries the same points, so the information is not lost, but it
+is less insistent than §2 made it.

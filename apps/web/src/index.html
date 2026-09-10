@@ -202,10 +202,51 @@
 </main>
 
 <!-- ═══ §2 GLOBAL FOOTER BAR ═══ -->
-<footer class="bar">
-  <span>Assize Protocol · Somnia × DreamDEX Event Contracts Hackathon</span>
-  <span class="mid">Instants only. Non-continuous. Payouts reach witnessed volume only.</span>
-  <span><a id="footRepo" href="#">Repository</a> · <a id="footAddr" target="_blank" rel="noopener">Deployment</a> · <a href="#/verify">Docs</a></span>
+<footer class="site">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="brand">ASSIZE</span>
+        <p>A maker publishes a quoting commitment on a DreamDEX event contract, backs it with a bond,
+          and Somnia validators sample whether it held. Every verdict points back to a transaction you
+          can open yourself.</p>
+        <p class="footer-caveat">Samples at instants, not continuously. No payout path is deployed:
+          a forfeited bond is recorded, not distributed.</p>
+      </div>
+
+      <nav class="footer-col" aria-label="App">
+        <h4>App</h4>
+        <a href="#/">Overview</a>
+        <a href="#/markets">Markets</a>
+        <a href="#/publish">Publish</a>
+        <a href="#/breaches">Breaches</a>
+        <a href="#/claim">Claims</a>
+        <a href="#/verify">Verifier</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Network">
+        <h4>Network</h4>
+        <a id="footExplorer" target="_blank" rel="noopener">Shannon explorer <span data-icon="ArrowUpRight" class="ext"></span></a>
+        <span>Chain 50312</span>
+        <a href="https://docs.dreamdex.io/developers/event-contracts" target="_blank" rel="noopener">Venue DreamDEX <span data-icon="ArrowUpRight" class="ext"></span></a>
+        <span>Testnet only</span>
+      </nav>
+
+      <nav class="footer-col" aria-label="Product">
+        <h4>Product</h4>
+        <a href="#/">How it works</a>
+        <a href="#/verify">Verification</a>
+        <a href="#/">What is measured</a>
+        <a id="footRegistry" target="_blank" rel="noopener">Registry contract <span data-icon="ArrowUpRight" class="ext"></span></a>
+        <a id="footSubscriber" target="_blank" rel="noopener">Subscriber contract <span data-icon="ArrowUpRight" class="ext"></span></a>
+      </nav>
+    </div>
+
+    <div class="footer-bottom">
+      <span>Assize Protocol. Somnia × DreamDEX Event Contracts Hackathon.</span>
+      <span class="mono" id="footVerified">verified on Somnia Shannon</span>
+    </div>
+  </div>
 </footer>
 <div id="overlay"></div>
 <script type="module" src="./app.js"></script>
