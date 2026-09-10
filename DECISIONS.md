@@ -959,3 +959,47 @@ buttons. Nothing is orphaned.
 publish form. That is later than §2 intended, and it is worth watching in the G9 user test: if
 someone stalls for want of testnet funds before they get that far, the link should come back
 somewhere earlier.
+
+---
+
+## D-034: The hover text effect was adapted into the existing stack, not integrated as shipped
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction (option A of three offered)
+
+**Evidence.** A React component was proposed for integration: a cursor-tracked SVG text reveal, plus
+a marketing footer, written for a shadcn/Next/Tailwind/`motion` project. Three things made
+integrating it as written the wrong move.
+
+**The stack does not exist here.** `apps/web` is four files — `index.html`, `styles.css`, `main.js`,
+`icons.js` — bundled with esbuild. No React, no Next, no Tailwind, no `components.json`, no
+`components/ui`, no `@/lib/utils`, no `.tsx` anywhere. Making the component run means adding a
+framework, a JSX toolchain, Tailwind and shadcn: a migration, not an integration.
+
+**Its palette contradicts the design authority.** `frontend.md` §1 opens with "Exact clone of
+Midday.ai: ultra-dark **monochrome** canvas". The component sweeps five hues — `#eab308`, `#ef4444`,
+`#80eeb4`, `#06b6d4`, `#8b5cf6` — plus `#3ca2fa`. None is a §1 token. Worse, `#ef4444` *is* a §1
+token: it is `--verdict-absent`. Using it decoratively would make a semantic state colour mean
+nothing, which is the same defect as collapsing two states into one.
+
+**Its demo carried another company's identity.** The footer shipped with "Nur/ui",
+`hello@nurui.com`, a phone number, a street location and "© Nurui. All rights reserved." That was
+not pasted anywhere. Publishing another party's contact details and copyright as this project's own
+is a misrepresentation regardless of intent.
+
+**What was built instead.** The effect itself — a stroke reveal that follows the pointer — carried
+into the existing stack in about forty lines of vanilla SVG, CSS and JavaScript. No dependency added.
+Every colour is a §1 token: the resting outline is `--border-subtle`, the one-time draw-on is
+`--border-strong`, and the revealed stroke is `--text-primary`. Because the system is monochrome the
+reveal is a change in weight and brightness rather than a gradient, which is what a monochrome system
+has instead of colour. The easing a spring library would provide is a short lerp on
+`requestAnimationFrame`, running only while the pointer is over the element. `prefers-reduced-motion`
+disables the draw-on.
+
+**The deviation this does carry.** `frontend.md` §3 Page 1 specifies six sections and this is a
+seventh, sitting above the boundaries box. It displaces nothing and adds no colour, but the document
+does not ask for it, and that is recorded here rather than left to be found.
+
+**Cost.** The effect is more restrained than the original: no rainbow, no 7xl wordmark, no
+`font-[helvetica]`. That is the point — a five-colour sweep in a monochrome system would read as
+imported from somewhere else, because it would have been.

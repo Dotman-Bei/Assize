@@ -73,6 +73,28 @@
     <p class="h2-sub">Read from chain when this page loaded, not from a database.</p>
     <div id="teaser" class="card flat"><span class="muted">reading the chain…</span></div>
 
+    <!-- Wordmark reveal. Not a section frontend.md §3 specifies — see D-034. -->
+    <div class="reveal" id="reveal" aria-hidden="true">
+      <svg viewBox="0 0 300 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="revealMask" gradientUnits="userSpaceOnUse" r="52" cx="150" cy="50">
+            <!-- Holds full luminance across the middle before falling away, so the
+                 lit region reads as a deliberate pool rather than a soft smudge. -->
+            <stop offset="0%" stop-color="#fff"/>
+            <stop offset="52%" stop-color="#fff"/>
+            <stop offset="100%" stop-color="#000"/>
+          </radialGradient>
+          <mask id="textMask"><rect x="0" y="0" width="300" height="100" fill="url(#revealMask)"/></mask>
+        </defs>
+        <!-- resting outline -->
+        <text class="r-rest" x="50%" y="50%" text-anchor="middle" dominant-baseline="middle">ASSIZE</text>
+        <!-- one-time draw-on -->
+        <text class="r-draw" x="50%" y="50%" text-anchor="middle" dominant-baseline="middle">ASSIZE</text>
+        <!-- revealed under the cursor -->
+        <text class="r-lit" x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" mask="url(#textMask)">ASSIZE</text>
+      </svg>
+    </div>
+
     <!-- Section 6: hard protocol boundaries -->
     <h2 style="margin-top:var(--s-10)">Hard protocol boundaries</h2>
     <p class="h2-sub">The disclosures an auditor should read before any number above.</p>

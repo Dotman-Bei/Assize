@@ -811,3 +811,23 @@ Checked first that neither was load-bearing: `/publish` is still reachable from 
 the hero CTA, and the faucet still appears in the insufficient-funds state on the commitment studio,
 where §3 Page 3 and §4 both require it. Verified in the browser — both gone, both routes still work,
 no console errors, no overflow at 390, 768 or 1440.
+
+---
+
+## 2026-09-10 — Wordmark reveal, adapted rather than integrated
+
+A React hover-text component was proposed for integration. It was not integrated as written: the
+stack it assumes does not exist here (no React, Tailwind, shadcn or `.tsx` anywhere in `apps/web`),
+its five-hue gradient contradicts §1's monochrome system — and one of those hues, `#ef4444`, is
+`--verdict-absent`, so using it decoratively would drain a semantic colour of meaning. Its demo also
+carried another company's name, email, phone number and copyright, which was not pasted anywhere.
+
+The effect was carried across instead: a pointer-tracked stroke reveal on the wordmark, forty lines
+of vanilla SVG, CSS and JS, no dependency added, every colour a §1 token. Easing is a lerp on
+requestAnimationFrame; the draw-on runs once when the element first scrolls into view and is disabled
+under `prefers-reduced-motion`.
+
+Verified in the browser against the running dev server: the mask centre moves from `150,50` at rest
+to `90,50` under the pointer, the draw-on completes, no console errors, no overflow at 390, 768 or
+1440. First pass read too faint to look deliberate, so the mask holds full luminance to 52% before
+falling away and the lit stroke widened — tuning inside the same tokens. D-034.

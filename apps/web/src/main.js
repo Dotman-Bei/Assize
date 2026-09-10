@@ -71,6 +71,7 @@ async function boot() {
   $("#footRepo").href = "#/verify";
 
   wire();
+  wireReveal();
   renderLifecycle();
   renderBoundaries();
   renderCliDocs();
@@ -106,6 +107,59 @@ function route() {
   window.scrollTo({ top: 0 });
   if (target === "/publish") renderPublish();
   if (target === "/claim") renderClaim();
+}
+
+/**
+ * Cursor-tracked reveal on the wordmark.
+ *
+ * The mask centre eases toward the pointer rather than snapping to it, which is
+ * what a spring library would give for free; here it is a short lerp on
+ * requestAnimationFrame, running only while the pointer is over the element.
+ * frontend.md §1 asks for "zero drop shadow or blur elevation", so the effect is
+ * carried entirely by stroke weight and colour, both of which are §1 tokens.
+ */
+function wireReveal() {
+  const host = $("#reveal");
+  const grad = host?.querySelector("#revealMask");
+  if (!host || !grad) return;
+
+  const svg = host.querySelector("svg");
+  let target = { x: 150, y: 50 }, at = { x: 150, y: 50 }, raf = null;
+
+  const step = () => {
+    at.x += (target.x - at.x) * 0.18;
+    at.y += (target.y - at.y) * 0.18;
+    grad.setAttribute("cx", at.x.toFixed(2));
+    grad.setAttribute("cy", at.y.toFixed(2));
+    raf = Math.abs(target.x - at.x) > 0.1 || Math.abs(target.y - at.y) > 0.1
+      ? requestAnimationFrame(step) : null;
+  };
+  const move = (e) => {
+    const box = svg.getBoundingClientRect();
+    // The viewBox is 300x100; the pointer arrives in CSS pixels.
+    target = {
+      x: ((e.clientX - box.left) / box.width) * 300,
+      y: ((e.clientY - box.top) / box.height) * 100,
+    };
+    if (raf === null) raf = requestAnimationFrame(step);
+  };
+  host.addEventListener("pointermove", move);
+  host.addEventListener("pointerleave", () => {
+    target = { x: 150, y: 50 };
+    if (raf === null) raf = requestAnimationFrame(step);
+  });
+
+  // Draw the wordmark once, when it first comes into view.
+  if (typeof IntersectionObserver === "function") {
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) { host.classList.add("on"); io.disconnect(); }
+      }
+    }, { threshold: 0.35 });
+    io.observe(host);
+  } else {
+    host.classList.add("on");
+  }
 }
 
 async function loadHealth() {
