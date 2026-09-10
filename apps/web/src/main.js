@@ -10,6 +10,7 @@
 import { createPublicClient, http, formatEther, parseEther, encodeFunctionData, custom, createWalletClient } from "viem";
 import { verdict as evaluate } from "@assize/reference";
 import { VERDICT_STATES, sampleSourceFromCode } from "@assize/protocol-types";
+import { icon } from "./icons.js";
 
 const abi = [
   { type: "function", name: "sampleCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -71,12 +72,28 @@ async function boot() {
   $("#footRepo").href = "#/verify";
 
   wire();
+  paintIcons();
   wireReveal();
   renderLifecycle();
   renderBoundaries();
   renderCliDocs();
   route();
   await Promise.all([loadChain(), loadHealth()]);
+}
+
+/** Fills every `data-icon` placeholder with its Lucide glyph. */
+function paintIcons() {
+  for (const node of $$("[data-icon]")) {
+    if (node.dataset.painted === "1") continue;
+    try {
+      node.innerHTML = icon(node.dataset.icon, node.classList.contains("arrow") ? 13 : 16);
+      node.dataset.painted = "1";
+    } catch (error) {
+      // A missing glyph is a defect worth seeing in the console, but it must not
+      // take the page down with it: everything below reads the chain.
+      console.error(`icon "${node.dataset.icon}" did not render:`, error.message);
+    }
+  }
 }
 
 function wire() {
@@ -202,7 +219,7 @@ function renderTelemetry() {
   const reactivity = S.samples.filter((s) => Number(s.sample.source) === 1).length;
   const pct = S.samples.length ? Math.round((reactivity / S.samples.length) * 100) : 0;
   const blocks = new Set(S.samples.map((s) => String(s.sample.blockNumber))).size;
-  const box = (label, value, foot) => `<div class="card"><div class="stat-label">${label}</div>
+  const box = (label, value, foot) => `<div class="stat-cell"><div class="stat-label">${label}</div>
     <div class="stat-value">${value}</div><div class="stat-foot">${foot}</div></div>`;
   $("#telemetry").innerHTML =
     box("Total value bonded", `${formatEther(bonded)} STT`, `${S.commitments.length} commitment(s) on chain`)
@@ -215,6 +232,7 @@ function renderLifecycle() {
   $("#lifecycle").innerHTML = LIFECYCLE.map(([title], i) => `
     <div class="stepcard" data-step="${i}" aria-current="${i === S.step}">
       <div class="stepnum">STEP ${i + 1}</div><h3>${title}</h3></div>`).join("");
+  paintIcons();
   const [title, body, status] = LIFECYCLE[S.step];
   const live = status === "Live.";
   $("#lifecycleDetail").innerHTML = `<div class="note ${live ? "" : "amber"}" style="margin-top:var(--s-3)">

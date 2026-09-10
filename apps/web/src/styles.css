@@ -142,6 +142,59 @@ h2 { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 var
 .src-KEEPER     { background: rgba(245,158,11,.10); color: #fbbf24; border-color: rgba(245,158,11,.20); }
 .src-UNLABELLED { background: rgba(239,68,68,.10);  color: #ef4444; border-color: rgba(239,68,68,.20); }
 
+/* ── Card row and feature card ────────────────────────────────────────────────
+ * The structure asked for: a heading, body copy set to a narrow measure, a row
+ * of wrapped tag chips, a gap that pushes the footer down so every column ends
+ * on the same line, and a footer link carrying a circular arrow.
+ *
+ * Columns abut inside a single outer border rather than floating as separate
+ * cards. The 1px gaps show the container's own background, which is how the
+ * dividers are drawn without a border on each child. Every colour is a §1 token.
+ */
+.card-row {
+  display: grid; gap: 1px; background: var(--border-subtle);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-xl); overflow: hidden;
+}
+.card-row > * { background: var(--bg-surface); }
+.card-row.r2 { grid-template-columns: repeat(2, 1fr); }
+.card-row.r3 { grid-template-columns: repeat(3, 1fr); }
+.card-row.r4 { grid-template-columns: repeat(4, 1fr); }
+.card-row.r5 { grid-template-columns: repeat(5, 1fr); }
+
+.feature { display: flex; flex-direction: column; padding: var(--s-6); min-height: 300px; }
+.feature > h3 {
+  font-family: var(--font-sans); font-size: 26px; font-weight: 500;
+  letter-spacing: -0.02em; line-height: 1.15; margin: 0;
+}
+.feature > p {
+  color: var(--text-secondary); font-size: 15px; line-height: 1.55;
+  margin: var(--s-6) 0 0; max-width: 26ch;          /* the narrow measure */
+}
+.tags { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-5); }
+.tag {
+  font-family: var(--font-sans); font-size: 12.5px; color: var(--text-secondary);
+  background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); padding: 6px 10px; white-space: nowrap;
+}
+/* pushes the footer to the bottom so columns end level */
+.feature .spacer { flex: 1 1 auto; min-height: var(--s-8); }
+.card-link {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  font-size: 14px; font-weight: 500; color: var(--text-primary);
+  background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--font-sans);
+}
+.card-link span:first-child { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.card-link .arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: var(--r-full);
+  background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);
+  transition: background .12s, border-color .12s;
+}
+.card-link:hover .arrow { background: var(--bg-surface-hover); border-color: var(--border-strong); }
+
+/* Stat tiles reuse the row so metrics sit in the same frame as the features. */
+.stat-cell { padding: var(--s-5) var(--s-6); }
+
 /* ── tables ───────────────────────────────────────────────────────────────── */
 .table-wrap { border: 1px solid var(--border-subtle); border-radius: var(--r-xl); overflow: hidden; background: var(--bg-surface); }
 .scroll { max-height: 560px; overflow: auto; }
@@ -232,10 +285,17 @@ footer.bar {
 footer.bar a:hover { color: var(--text-secondary); }
 footer .mid { text-align: center; }
 
-@media (max-width: 1100px) { .g4 { grid-template-columns: repeat(2, 1fr); } .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1100px) {
+  .g4 { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .card-row.r4, .card-row.r5 { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 768px) {
   h1 { font-size: 34px; }
   .g4, .g2, .steps { grid-template-columns: 1fr; }
+  .card-row.r2, .card-row.r3, .card-row.r4, .card-row.r5 { grid-template-columns: 1fr; }
+  .feature { min-height: 0; padding: var(--s-5); }
+  .feature > h3 { font-size: 22px; }
   header.top { flex-wrap: wrap; height: auto; padding: var(--s-2) var(--s-3); }
   nav.tabs { order: 3; width: 100%; }
   .nav-left, .nav-right { flex: 0 0 auto; }

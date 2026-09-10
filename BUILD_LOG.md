@@ -860,3 +860,28 @@ overflow at 390 / 768 / 1440       none
 D-035, including the cost: the page now depends on fonts.googleapis.com, so the single file is no
 longer quite self-contained. It falls back to the system face offline, where it cannot read the chain
 anyway. Repository documents still use em dashes; only `apps/web` was cleared.
+
+---
+
+## 2026-09-10 — Card structure, and a verification method that was lying to me
+
+**Cards** now follow the supplied reference: heading, body at a narrow measure, wrapped tag chips, a
+flex spacer holding footers level, and a footer link with a circular arrow. Columns abut inside one
+outer border, dividers drawn by the container's background through a 1px grid gap. Telemetry tiles
+and lifecycle steps share the same frame. Verified against the built file: 2 arrow glyphs, 8 chips,
+4 telemetry cells, 5 lifecycle cells, both footer links at y=998, no console errors, no overflow at
+390/768/1440.
+
+The reference's serif headings were **not** adopted. §1 names a sans and a mono and no serif; the
+request was for structure, and a third family is a bigger change than that. D-036, owner decision.
+
+**And the method was broken.** The icon module had stopped being imported when `main.js` was rewritten
+for the new `frontend.md`. Every browser check since had run against the dev server, whose esbuild
+watcher held a graph from before the rewrite and kept serving a bundle that no longer matched the
+source. `paintIcons` was calling an `icon` that did not exist, and `boot`'s own catch swallowed the
+ReferenceError so it never reached the console.
+
+So three earlier entries here that say "console errors: none" were true of what the watcher served
+and not of the source. D-037 records that rather than quietly amending them. Verification now runs
+against `dist/assize.html`, the artefact actually shipped. The dev server is for editing; it is not
+evidence.

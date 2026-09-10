@@ -50,31 +50,45 @@
     </div>
 
     <!-- Section 2: live protocol telemetry bento -->
-    <div class="grid g4" id="telemetry"></div>
+    <div class="card-row r4" id="telemetry"></div>
 
     <!-- Section 3: problem vs mechanism -->
-    <div class="grid g2" style="margin-top:var(--s-3)">
-      <div class="card">
-        <h2>The Residual Price Fallacy</h2>
-        <p class="h2-sub" style="margin:0">A prediction market shows a price produced by an order
-          book, and an order book can be empty. On a thin book the number on screen is the residue of
-          whoever quoted last, not an offer anyone will fill. A trader arrives, sizes up, finds no
-          counterparty, and leaves, and nothing anywhere records that it happened. The market's page
-          looks identical the next day.</p>
-      </div>
-      <div class="card">
-        <h2>Reactivity-Driven Enforcement</h2>
-        <p class="h2-sub" style="margin:0">Somnia's reactivity precompile invokes a handler when the
-          market emits, so validators, not us, drive the measurement. The handler reads the book at
-          that instant, writes a block-pinned sample, and the registry evaluates a deterministic
-          verdict from stored data alone. A breach forfeits the maker's bond on chain.</p>
-      </div>
+    <div class="card-row r2" style="margin-top:var(--s-3)">
+      <article class="feature">
+        <h3>The Residual Price Fallacy</h3>
+        <p>A displayed price on an empty book is a number, not an offer anyone will fill.</p>
+        <div class="tags">
+          <span class="tag">Thin books</span>
+          <span class="tag">Stale last trade</span>
+          <span class="tag">No record kept</span>
+          <span class="tag">Volume says nothing</span>
+        </div>
+        <div class="spacer"></div>
+        <button class="card-link" data-nav="/markets">
+          <span>Explore Monitored Markets</span><span class="arrow" data-icon="ArrowUpRight"></span>
+        </button>
+      </article>
+      <article class="feature">
+        <h3>Reactivity-Driven Enforcement</h3>
+        <p>Validators invoke the handler, the book is read at that instant, and the verdict is
+          computed from stored data alone.</p>
+        <div class="tags">
+          <span class="tag">Validator-driven</span>
+          <span class="tag">Block-pinned samples</span>
+          <span class="tag">Deterministic verdict</span>
+          <span class="tag">On-chain forfeiture</span>
+        </div>
+        <div class="spacer"></div>
+        <button class="card-link" data-nav="/breaches">
+          <span>Explore Recorded Breaches</span><span class="arrow" data-icon="ArrowUpRight"></span>
+        </button>
+      </article>
     </div>
 
     <!-- Section 4: five-step lifecycle -->
     <h2 style="margin-top:var(--s-10)">The deterministic protocol lifecycle</h2>
     <p class="h2-sub">Five steps. Select one to read what it does and what it does not.</p>
-    <div class="steps" id="lifecycle"></div>
+    <div class="card-row r5" id="lifecycle"></div>
     <div id="lifecycleDetail"></div>
 
     <!-- Section 5: live breach proof teaser -->

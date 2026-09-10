@@ -1039,3 +1039,57 @@ anyone claims the single file is fully self-contained, because it no longer quit
 
 **Not done.** The em dash removal covers `apps/web` only. `DECISIONS.md`, `BUILD_LOG.md`, `README.md`
 and the other repository documents still use them.
+
+---
+
+## D-036: Cards adopt the reference structure; the serif in it is not adopted
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted for the structure. **The typeface is an `OWNER DECISION`.**
+
+**Evidence.** The owner supplied a reference showing a card structure and asked for it: a heading, body
+copy set to a narrow measure, a row of wrapped tag chips, a gap holding the footers level, and a
+footer link carrying a circular arrow, with columns abutting inside one outer border rather than
+floating as separate cards.
+
+All of that is now built. The dividers are the container's own background showing through a 1px grid
+gap, so no child carries a border of its own, and the spacer is a flex fill so every column ends on
+the same line whatever its content length. Verified: footer links land at an identical y on both
+columns, chips wrap, and the row collapses to one column below 768px.
+
+**What was not adopted.** The reference's headings are a serif. `frontend.md` §1 names two families,
+`--font-sans` and `--font-mono`, and no serif. The headings are therefore set in the §1 sans. The
+request was for the structure, and a third typeface is a larger change than that word carries, so it
+is asked rather than assumed. If the serif is wanted, it needs a family name in §1.
+
+**Cost.** The cards read closer to the reference in layout than in voice: a serif heading is most of
+what gives that reference its character, and the sans version is plainer. That is a deliberate
+under-reach, reversible in one token.
+
+---
+
+## D-037: A stale dev-server watcher invalidated three rounds of verification
+
+**Date:** 2026-09-10, Phase P4
+**Status:** recorded, with the practice changed
+
+**Evidence.** The icon module stopped being imported when `main.js` was rewritten for the replacement
+`frontend.md`. Nothing caught it, because every browser check since had been run against
+`http://localhost:5173`, served by a long-lived esbuild watcher whose graph predated the rewrite. It
+kept serving a bundle that no longer matched the source, so the checks were measuring an artefact of
+the watcher rather than the code.
+
+The failure surfaced only when arrow glyphs did not render and the bundle turned out to contain no
+icons at all. `paintIcons` was calling an `icon` that was never imported, and the resulting
+`ReferenceError` was being swallowed by `boot`'s own catch, so it never reached the console either.
+
+**Two fixes.** The import is restored, and `paintIcons` now catches per glyph and logs, so a missing
+icon is visible in the console without taking down the chain reads underneath it.
+
+**The practice that changed.** Browser verification runs against
+`file:///…/dist/assize.html` — the artefact actually shipped — rather than against a watcher that can
+serve something else. The dev server remains for editing; it is not evidence.
+
+**Cost.** Three earlier reports in `BUILD_LOG.md` say "console errors: none" for runs made against
+the stale watcher. Those statements were true of what was served and not of the source. They are not
+edited out, and this entry is what corrects them.
