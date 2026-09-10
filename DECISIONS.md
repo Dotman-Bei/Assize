@@ -544,3 +544,61 @@ is confirmed live, and the handler's logic is covered by fixtures, but the join 
 proven only by deployment — which is gate G3, and which needs the funds and key the owner holds.
 Recorded for the SDK and documentation feedback report (PRD §20), alongside the SDK's unexported
 `dist/eventsAbi.js`.
+
+---
+
+## D-019: Use two wallets, not one — the owner role can forge samples if it is also the maker
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted. Affects who funds what, so it is settled before the faucet is claimed.
+
+**Evidence.** `AssizeRegistry` gives its owner exactly one power: `registerKeeper`. That looked
+harmless when written, because PRD §10 permits it and the owner cannot touch a bond. It is not
+harmless if the owner and the maker are the same account.
+
+A registered keeper may call `recordSample` directly. So a single key that is both owner and maker
+could register itself as keeper and write samples of its own choosing against its own commitment —
+showing `COVERED_AT_SAMPLE` on a book that was empty, and never forfeiting the bond it posted.
+
+Block pinning makes that **detectable**: PRD §6 rests the keeper path's trust on exactly this, a
+stranger re-reading the book at the pinned block and comparing. But detection is not prevention, and
+the product's claim is that a verdict can be re-derived rather than that our conduct can be audited
+after the fact. A verifier who sees one key holding both roles has to take our word for something,
+which is the thing this repository is organised to avoid.
+
+**Decision.** The deployer/owner and the maker are separate accounts, with separate keys. The maker
+posts bonds and quotes; the owner deploys and holds the keeper power it is not expected to use. With
+the roles split, no single key can both stand behind a commitment and fabricate the samples that
+judge it, and that is true structurally rather than by our restraint.
+
+**Cost.** Two faucet claims instead of one, and two keys in `.env.local`. Cheap. The alternative
+costs a sentence of trust in every claim the project makes.
+
+---
+
+## D-020: The subscription's `gasLimit` is a funding floor, not a ceiling
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Evidence.** The pinned reactivity reference, under Automatic removal: a subscription is removed
+when "the owner's balance doesn't cover the subscription's `gasLimit` when it fires, i.e. it's less
+than `(execution price per gas + priorityFeePerGas) * gasLimit`".
+
+The balance is tested against the **whole `gasLimit`**, not against the gas the handler actually
+uses. And the consequence is removal, not a skipped invocation — the subscription is gone, and
+sampling stops silently. That is precisely the failure PRD §8.2 calls "a silent `NOT_SAMPLED`, which
+is the worst failure this product can have", and it is worse than assumed: not a gap, an ending.
+
+`SomniaExtensions.DEFAULT_HANDLER_GAS_LIMIT` is 10,000,000. At the reference's
+`MINIMUM_BASE_FEE_PER_GAS` of 6 gwei, taking the default would require 0.06 STT free at every single
+firing, for a handler measured at roughly a quarter of a million gas.
+
+**Decision.** Do not take the default. Set `gasLimit` from measurement — `onEvent` costs at most
+254,574 gas against a fixture pool, so a real pool read plus headroom sits near 1,000,000 — and fund
+the subscriber well above `gasLimit * price` rather than near it.
+
+**Cost.** A `gasLimit` set too tight fails the handler mid-execution, which does not remove the
+subscription but does lose the sample. Too loose and the balance floor rises. The number must be
+re-measured against a real pool once G3 has produced one invocation, and published as the cost per
+sample that gate G11 requires.

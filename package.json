@@ -21,7 +21,8 @@
     "probe:reactivity": "tsx scripts/probe-reactivity.ts",
     "probe:all": "tsx scripts/probe-all.ts",
     "lint:contracts": "forge lint contracts/src",
-    "skills:verify": "tsx scripts/skills-verify.ts"
+    "skills:verify": "tsx scripts/skills-verify.ts",
+    "preflight": "tsx scripts/preflight.ts"
   },
   "devDependencies": {
     "@assize/protocol-types": "workspace:*",

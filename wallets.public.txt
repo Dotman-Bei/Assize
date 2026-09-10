@@ -1,0 +1,5 @@
+Assize testnet accounts. Addresses only — safe to share.
+Generated 2026-09-10. Keys live in .env.local, which is gitignored.
+
+DEPLOYER  0xF3F0C3fB033e97F6f09BAe7F52329a8825167054
+MAKER     0x62Ec9c9410c1b59647749D4d3005c75b9F380F38
