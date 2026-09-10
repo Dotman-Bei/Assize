@@ -1205,3 +1205,35 @@ interrupting it.
 all. On a first visit that is 300 pixels of scroll between the last disclosure and the footer, which
 is a real tax on someone looking for the footer links. Reduced to 150 pixels below 768px for that
 reason, and worth watching at G9: if a tester scrolls past the footer looking for it, this is why.
+
+---
+
+## D-042: G10 uses a stubbed chain, because four of the seven states have never occurred
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted
+
+**Evidence.** G10 requires that loading, empty, error, insufficient-STT, `NOT_SAMPLED` and
+`WINDOW_CLOSED` are all reachable in the app. Pointing the app at Shannon reaches two of them: the
+chain has only ever recorded `SPREAD_BREACH` and `COVERED_AT_SAMPLE`. `NOT_SAMPLED`, `WINDOW_CLOSED`,
+`ABSENT`, `DEPTH_BREACH` and `SAMPLER_FAILED` have never happened, and an empty registry and a failing
+RPC cannot be arranged on a live deployment at all.
+
+So `scripts/e2e/chain-double.mjs` serves crafted JSON-RPC responses and the test drives the app
+through each state.
+
+**Why this does not violate the no-simulation rule.** AGENTS.md forbids simulated data on the public
+proof path and requires local fixtures be labelled. The double is loaded only by `pnpm test:e2e`,
+lives in `scripts/e2e`, and is never bundled into `apps/web` — the shipped artefact has no code path
+that reaches it. It proves a screen can render, and makes no claim about anything on chain. Every
+claim about chain data still comes from `verify:testnet` and `assize verify`, which read the real one.
+
+**Verified to fail.** Removing the directory's empty-state copy and the two faucet links made exactly
+those two checks fail and left the other four passing. A state test that cannot fail proves that the
+app compiles, not that a user can reach anything.
+
+**Cost.** The test asserts the app renders a state when handed data that produces it. It does not
+prove the app would receive that data from the real chain — that a genuine sampling gap would arrive
+as a zeroed slot and be drawn as `NOT_SAMPLED`. The contract tests cover the storage side and the
+differential covers the evaluator, so the join is covered at both ends and asserted nowhere in the
+middle. Worth closing if a real `NOT_SAMPLED` ever lands on chain.

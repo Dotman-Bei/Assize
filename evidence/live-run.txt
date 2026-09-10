@@ -1,13 +1,13 @@
 Assize evidence — read from chain, not from our database
-generated 2026-09-10T13:38:04.475Z
-registry 0xa43d71fff5ecedc577a0623421a16c2d11dc6b61   chain 50312   head 484742448
+generated 2026-09-10T15:54:31.831Z
+registry 0xa43d71fff5ecedc577a0623421a16c2d11dc6b61   chain 50312   head 484824309
 
 TOTALS, read from the registry and cumulative since deployment:
   samples recorded:  29541
   breaches recorded: 29431
 
 The rest of this report covers a log scan of the last 30000 blocks
-(484712448 to 484742448). Somnia produces a block every 100ms,
+(484794309 to 484824309). Somnia produces a block every 100ms,
 so that window is well under an hour. A count of zero below means nothing was sampled
 in the last hour — not that nothing was ever sampled. The totals above are the record.
 

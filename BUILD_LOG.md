@@ -990,3 +990,30 @@ cursor), no console errors, no overflow at 390/768/1440. D-041 amends the placem
 
 It is now the tallest element on the page and carries no information, which is a real cost recorded
 in D-041: 300px of scroll between the last disclosure and the footer, halved below 768px.
+
+---
+
+## 2026-09-10 — G10 passes: every state reachable
+
+`pnpm test:e2e` drives the built artefact through all six states G10 names and asserts each on the
+rendered page.
+
+```
+ok  loading            page reports it is reading the chain before data arrives
+ok  empty              directory shows its empty state
+ok  error              failure to read the chain is reported on screen, not swallowed
+ok  insufficient STT   warning shown, 2 faucet links, submit disabled
+ok  not sampled        4 NOT_SAMPLED badges, with the gap explained on screen
+ok  window closed      5 WINDOW_CLOSED badges rendered
+G10 PASSED: all 6 states reachable.
+```
+
+Four of those states have never occurred on chain, so the test serves crafted RPC responses from
+`scripts/e2e/chain-double.mjs`. That double is loaded only by this command, never bundled into
+`apps/web`, and makes no claim about chain data — every claim about the chain still comes from
+`verify:testnet` and `assize verify`, which read the real one. D-042.
+
+Negative-controlled: removing the empty-state copy and the faucet links failed exactly those two
+checks and left the other four passing.
+
+It runs against `dist/assize.html` rather than the dev server, for the reason in D-037.

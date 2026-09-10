@@ -25,7 +25,8 @@
     "preflight": "tsx scripts/preflight.ts",
     "evidence:report": "tsx scripts/evidence-report.ts",
     "assize": "tsx packages/verifier/src/cli.ts",
-    "verify:testnet": "tsx scripts/verify-testnet.ts"
+    "verify:testnet": "tsx scripts/verify-testnet.ts",
+    "test:e2e": "tsx scripts/e2e.mjs"
   },
   "devDependencies": {
     "@assize/protocol-types": "workspace:*",
