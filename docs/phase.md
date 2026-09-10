@@ -51,11 +51,32 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
    Treating the app as cut by K10 was an error, corrected in D-025: K10 cuts the claim flow, not the
    frontend, and the gates it protects need one.
 2. **G9** — three first-time users completing the core action unaided. Needs a UI, and needs people.
-3. **G12** — submission package. Done: README to the five beats, `DEPLOYMENT.md`, `SETUP.md`,
-   `SECURITY.md`, `ARCHITECTURE.md`, `LICENSE`, `.env.example`, and the SDK and documentation
-   feedback report (`FEEDBACK.md`, eight findings with reproductions and payloads).
-   Outstanding and owner-held: the demo video, filing `FEEDBACK.md` wherever the organisers asked,
-   and submitting. The repository must also be made public.
+3. **G12** — submission package. The gate command PRD §22 names now exists:
+   **`pnpm submission:check`**. It splits the package in two, because the halves fail differently.
+
+   *In the repository, and passing:* the nine required files present and non-empty, the README's
+   five beats in the official order, `DEPLOYMENT.md` agreeing with `deployments/` on every contract
+   address, and a clean working tree. The address check is the one that earns its place — it is what
+   catches a redeploy that left the published addresses pointing at a dead contract.
+
+   *Owner-held, and outstanding:* a live public URL for the app, the demo video, the words beat 4
+   uses to say that nobody was paid, and filing `FEEDBACK.md` with the organisers. These are
+   declared in `submission.json`, and no declaration is taken at its word — a URL written there is
+   fetched, and a repository said to be public is asked, unauthenticated, whether it is.
+
+   The repository **is** public (`Dotman-Bei/Assize`, MIT detected by GitHub), so that item is now
+   met and the gate confirms it. The gate also compares the local tip against the tip GitHub serves,
+   because work that is committed but unpushed does not exist for a judge.
+
+   `pnpm submission:check` currently exits 1, and PRD §24 governs: nothing is submitted before G12
+   passes.
+
+4. **§15 runbooks** — written, in `docs/runbooks/`. Five pages for the five failures §15 names.
+   Four of them have happened here and are written from the incident and its readings rather than
+   from imagination; the fifth cannot happen, because the settlement code it needs was cut, and its
+   page proves the absence with a bytecode selector scan instead of rehearsing a procedure for code
+   that is not there. Every command in every page was executed against the live chain before being
+   published — which is how two of them were found to be wrong and fixed.
 
 Not attempted, and not to be claimed: G5 (payout) and G6 (a sustained 24h campaign).
 

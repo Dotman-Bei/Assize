@@ -64,6 +64,12 @@ function flag(argv: readonly string[], name: string): string | undefined {
   return at >= 0 ? argv[at + 1] : undefined;
 }
 
+/** An environment variable, treating blank as absent. */
+function env(name: string): string | undefined {
+  const value = process.env[name];
+  return value === undefined || value.trim() === "" ? undefined : value.trim();
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h" || argv[0] !== "verify") {
@@ -72,8 +78,13 @@ async function main(): Promise<void> {
   }
 
   const record = loadDeployment();
-  const rpcUrl = flag(argv, "--rpc") ?? process.env["SOMNIA_RPC_URL"] ?? record?.rpcUrl;
-  const registry = (flag(argv, "--registry") ?? process.env["ASSIZE_REGISTRY_ADDRESS"]
+  // `env` rather than `process.env` directly, because `??` only falls through on
+  // null and undefined. A key defined as empty — which is how `.env.example`
+  // ships every address — is a string, so it won an `??` chain against the
+  // deployment record and left this command reading the empty address while a
+  // correct record sat unused beside it.
+  const rpcUrl = flag(argv, "--rpc") ?? env("SOMNIA_RPC_URL") ?? record?.rpcUrl;
+  const registry = (flag(argv, "--registry") ?? env("ASSIZE_REGISTRY_ADDRESS")
     ?? record?.contracts.AssizeRegistry) as Address | undefined;
   const sampleFlag = flag(argv, "--sample");
   const positional = argv.slice(1).find((a) => !a.startsWith("--") && /^\d+$/u.test(a));

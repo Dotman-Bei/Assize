@@ -1333,3 +1333,44 @@ the registry with it. The registry's `keeper` slot would have accepted a new sub
 redeploying, and was rejected: keeper samples are labelled `KEEPER` by design, the owner may rotate
 the keeper at will, and routing the reactivity path through it would put an admin lever over sampling
 that `subscriber` being immutable exists to deny. Cheaper is not the same as true.
+
+---
+
+## D-045: A key defined as empty is not an unset key
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, fixing a bug found while writing the runbooks
+
+**Evidence.** `pnpm evidence:report`, cited in a runbook draft, exited 1 with a viem stack trace
+ending `contractAddress: ''`. `.env.local` carried `ASSIZE_REGISTRY_ADDRESS=` with nothing after
+the equals sign, which is how `.env.example` ships every address — the file exists to name the keys,
+so it defines them empty.
+
+An empty value is a `string`. Three call sites read `process.env[...]` and guarded only
+`=== undefined`, so the empty string passed the guard, skipped the one-line "is required" message
+directly below it, and reached viem as an address.
+
+**The sharper case.** `packages/verifier/src/cli.ts` — the command the app puts in front of a
+stranger — resolved its registry as:
+
+```ts
+flag(argv, "--registry") ?? process.env["ASSIZE_REGISTRY_ADDRESS"] ?? record?.contracts.AssizeRegistry
+```
+
+`??` falls through on `null` and `undefined` only. An empty string is neither, so **a blank
+environment variable beat the deployment record** and `assize verify` read the empty address with a
+correct record sitting unused beside it. Anyone who sourced `.env.example` — which SETUP.md tells
+them to copy — got that, and the failure names neither the variable nor the record.
+
+**The fix.** A three-line `env(name)` at each site returning `undefined` for blank, so `??` falls
+through as intended. `scripts/probe/shared.ts` already had exactly this in `requireEnv`; the sites
+that broke were the ones that reached for `process.env` directly instead of using it. The rule is
+that no call site reads `process.env` raw.
+
+**Why it stayed hidden.** Every run that mattered was made in a shell where the values were real.
+The bug needs the key present and empty, which is the state of a fresh clone and of nothing else —
+so it was invisible to us and waiting for the first stranger, which is the population G7 is about.
+
+**The rule this earns.** A default that is not a value must be absent, not blank. When a file's
+purpose is to name keys, it hands every consumer the empty-string case, and `??` will not save you
+from it.

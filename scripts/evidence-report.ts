@@ -23,9 +23,19 @@ const sampleRecorded = parseAbiItem(
   "event SampleRecorded(uint256 indexed sampleId, uint256 indexed commitmentId, uint8 verdict, uint8 source, uint64 blockNumber, bytes32 blockHash, uint128 bid, uint128 ask, uint128 bidSize, uint128 askSize)",
 );
 
+/** An environment variable, treating blank as absent. */
+function env(name: string): string | undefined {
+  const value = process.env[name];
+  return value === undefined || value.trim() === "" ? undefined : value.trim();
+}
+
 async function main(): Promise<void> {
-  const rpcUrl = process.env["SOMNIA_RPC_URL"];
-  const registry = process.env["ASSIZE_REGISTRY_ADDRESS"] as Address | undefined;
+  // Blank counts as unset. `.env.example` ships these keys with empty values, so
+  // a clone that sources it has them defined and empty — which slipped past an
+  // `=== undefined` guard and reached viem as an empty address, surfacing as a
+  // stack trace instead of the one-line message directly below.
+  const rpcUrl = env("SOMNIA_RPC_URL");
+  const registry = env("ASSIZE_REGISTRY_ADDRESS") as Address | undefined;
   if (rpcUrl === undefined || registry === undefined) {
     process.stderr.write("SOMNIA_RPC_URL and ASSIZE_REGISTRY_ADDRESS are required.\n");
     process.exit(1);

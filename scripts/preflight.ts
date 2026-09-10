@@ -80,7 +80,10 @@ async function main(): Promise<void> {
   const rows: Row[] = [];
   const deployer = wallets["DEPLOYER"];
   const maker = wallets["MAKER"];
-  const subscriber = process.env["ASSIZE_SUBSCRIBER_ADDRESS"];
+  const subscriberEnv = process.env["ASSIZE_SUBSCRIBER_ADDRESS"];
+  const subscriber = subscriberEnv !== undefined && subscriberEnv.trim() !== ""
+    ? subscriberEnv.trim()
+    : undefined;
 
   if (deployer !== undefined) {
     rows.push({
