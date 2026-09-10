@@ -812,3 +812,39 @@ copies of it. `String.prototype.replace` interprets `$&` and `$'` inside a repla
 a minified bundle is full of both — so the bundle's own text re-inserted the tag it was replacing.
 Passing the replacement as a function disables that interpretation. The symptom was a page that
 looked built and rendered nothing, and the console error named CORS rather than the real cause.
+
+---
+
+## D-029: The spacing scale is derived from frontend.md's vocabulary, not invented beside it
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted
+
+**Evidence.** An audit of the first web build against `frontend.md` found two distinct problems.
+
+Thirteen specified components were simply missing: the Connect Wallet button, the
+"Publish Maker Commitment" CTA, Box 2's copyable terminal, the whole Market Registry Directory
+(§3.4), the Handler Gas Gauge, the depth chart, the Stored Sample Inspector and the `NOT_SAMPLED`
+explainer row (§3.5), the whole Maker Commitment Publisher (§3.6), the breach page's explorer link,
+and the Lucide icon set. None of those needed a decision. They needed building, and they are built.
+
+The second problem is the one worth recording. `frontend.md` fixes every colour, type size, weight
+and tracking, and it fixes the 56px nav and the 680px measure. It fixes no spacing, padding, radius
+or gap scale — and the first build invented one: a 14px card radius, 18px padding, a 56px section
+rhythm, all numbers chosen by hand. It also shipped a single breakpoint at 900px where §6 asks for
+390, 768 and 1440.
+
+**Decision.** `frontend.md` is written in Tailwind's vocabulary from end to end — `backdrop-blur-xl`,
+`rounded-lg`, `bg-cyan-950/40`, `border-white/[0.06]`, `hover:bg-zinc-200`, `tracking-wider`,
+`font-bold`. That is an implied system rather than a silence. The stylesheet now declares Tailwind's
+default spacing and radius scales as named tokens at the top and uses only those, so every value is
+traceable to the document's own idiom instead of to taste. Breakpoints are §6's three.
+
+**Cost.** It is a reading, not an instruction, and it is recorded here as one so it can be overruled
+cheaply: the tokens sit in one block at the top of `styles.css`, and a different scale would be a
+find-and-replace rather than a rewrite.
+
+**A rule for later.** The icons make the point smaller and sharper. §5.1 says Lucide or Phosphor; the
+first build hand-drew an SVG glyph instead, which is a visual decision invented where one was
+specified. They are now extracted verbatim from the `lucide-static` package at build time. When the
+document names a source, use that source.

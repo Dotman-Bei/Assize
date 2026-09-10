@@ -24,6 +24,9 @@ importers:
       '@types/node':
         specifier: ^22.20.2
         version: 22.20.2
+      lucide-static:
+        specifier: ^1.43.0
+        version: 1.43.0
       playwright:
         specifier: ^1.63.0
         version: 1.63.0
@@ -828,6 +831,9 @@ packages:
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
 
+  lucide-static@1.43.0:
+    resolution: {integrity: sha512-w7vdVFqh4vv7RxWHN4sSeylA0s3GHV5vpyGqZI0q22MINKJyhMNWSMd90RyTUYWBRNYqdZVZzrMmijVxU3Cl9A==}
+
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -1523,6 +1529,8 @@ snapshots:
       ws: 8.21.0
 
   loupe@3.2.1: {}
+
+  lucide-static@1.43.0: {}
 
   magic-string@0.30.21:
     dependencies:

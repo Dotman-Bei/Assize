@@ -5,14 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Assize — a quoting commitment, sampled on chain</title>
 <meta name="description" content="A market maker publishes a quoting commitment, backs it with a bond, and the chain samples whether the commitment held.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2308090C'/%3E%3Cpath d='M3 8h18M6 8v3a6 6 0 0 0 12 0V8M9 21h6M12 17v4' stroke='%23F8FAFC' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2308090C'/%3E%3Cpath d='M12 3v18M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1M7 21h10' stroke='%23F8FAFC' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+<!-- ============ §2.1 STICKY TOP NAVIGATION ============ -->
 <header class="top">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 8h18M6 8v3a6 6 0 0 0 12 0V8M9 21h6M12 17v4" stroke="#F8FAFC" stroke-width="1.6" stroke-linecap="round"/>
-  </svg>
+  <span id="logo"></span>
   <span class="wordmark">ASSIZE</span>
   <span class="env-pill">SHANNON TESTNET</span>
   <nav class="tabs" id="tabs">
@@ -22,46 +21,44 @@
     <button data-view="docs">Documentation &amp; Phase</button>
   </nav>
   <span class="gas-pill" id="gasPill"><span class="dot"></span><span id="gasText">reading handler funding…</span></span>
-  <a class="faucet" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener" title="Somnia dev group, faucet topic">Testnet faucet</a>
+  <a class="faucet" id="faucetLink" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener"
+     title="Somnia dev group, faucet topic — request testnet STT and tUSDC">Faucet</a>
+  <button class="wallet" id="connect">Connect Wallet</button>
 </header>
 
 <main>
-  <!-- ============ HERO (frontend.md §3.1) ============ -->
+  <!-- ============ §3.1 HERO ============ -->
   <section id="hero">
     <span class="anchor-badge">SOMNIA REACTIVITY PRECOMPILE × DREAMDEX EVENT CONTRACTS</span>
     <h1>Liquidity is a quoting commitment backed by an on-chain bond.</h1>
     <p class="sub">DreamDEX order books are sampled at discrete instants using Somnia validator-driven
       callbacks. When a maker breaches committed spread or depth, the bond forfeits pro rata to
       traders witnessed in that window.</p>
-    <div class="notice warn" id="payoutCaveat">
+    <div class="notice warn">
       <strong>What this deployment does, exactly.</strong> It measures and it records. It does not
       settle. A bond is recorded as forfeited and no trader is paid, because the payout path was cut
       under this project's own kill criteria when the submission window got short. Nothing here
       implies anyone was made whole.
     </div>
     <div class="cta-row">
-      <button class="btn btn-primary" data-view="markets">Inspect live markets</button>
-      <button class="btn btn-secondary" data-view="ledger">Open the breach ledger</button>
-      <button class="btn btn-ghost" data-view="verify">▸ Verify a breach yourself</button>
+      <button class="btn btn-primary" data-view="markets">Inspect Live Markets</button>
+      <button class="btn btn-secondary" id="openPublisher">Publish Maker Commitment</button>
+      <button class="btn btn-ghost" data-view="verify" id="verifyCta">Verify a Breach via CLI</button>
     </div>
 
     <div class="grid-2" style="margin-top:36px">
-      <!-- Latest on-chain sample (§3.2, real data — not a simulation) -->
       <div class="card">
         <div class="card-head">
           <span class="card-title" id="latestHead">LATEST ON-CHAIN SAMPLE</span>
           <span class="badge s-REACTIVITY">source: REACTIVITY</span>
         </div>
-        <div id="latestBody" class="spin">reading the chain…</div>
+        <div id="latestBody" class="spin-note">reading the chain…</div>
       </div>
-      <!-- The evaluator, run locally (§3.2 interactive readout) -->
       <div class="card">
-        <div class="card-head">
-          <span class="card-title">THE VERDICT FUNCTION, RUN IN YOUR BROWSER</span>
-        </div>
+        <div class="card-head"><span class="card-title" id="evalTitle">THE VERDICT FUNCTION, RUN IN YOUR BROWSER</span></div>
         <p class="section-note" style="margin:0 0 14px">
           Not chain data. This runs the same pure evaluator the contract runs, on numbers you choose,
-          so you can see the states change. Move the spread past the committed bound.
+          so you can watch the states change. Move the spread past the committed bound.
         </p>
         <label class="field">SAMPLED SPREAD — <span id="spreadOut" class="mono">0</span> raw</label>
         <input type="range" id="spread" min="0" max="60000" step="500" value="8000">
@@ -71,134 +68,122 @@
       </div>
     </div>
 
-    <!-- Bento (§3.3) -->
+    <!-- ============ §3.3 BENTO GRID ============ -->
     <div class="bento" style="margin-top:36px">
       <div class="card">
-        <h3>Instant reactive sampling</h3>
+        <h3 id="bento1">Instant Reactive Sampling (Path R)</h3>
         <p>A subscription on the pool wakes the registry when the market emits. Validators invoke the
-          handler, it reads the book at that instant, and the sample is written on chain. Nobody sends
-          a transaction to make it happen.</p>
+          handler as a synthetic transaction, it reads the book at that instant, and the sample is
+          written on chain. Nobody sends a transaction to make it happen.</p>
       </div>
       <div class="card">
-        <h3>Zero-trust stranger verification</h3>
-        <p>The verdict is a pure function of a stored sample and a stored commitment. Anyone can read
-          both from a public RPC and re-derive it with a second implementation, which is what
-          <code>pnpm claim:verify</code> does.</p>
+        <h3 id="bento2">Zero-Trust Stranger Verification</h3>
+        <p>The verdict is a pure function of a stored sample and a stored commitment, so anyone can
+          re-derive it from a public RPC with a second implementation.</p>
+        <div class="term" style="margin-top:12px"><button class="copy" data-copy="pnpm claim:verify">copy</button><span id="bentoCmd">pnpm claim:verify</span></div>
       </div>
       <div class="card">
-        <h3>The anti-dashboard</h3>
-        <p>Gaps are recorded as <span class="badge v-NOT_SAMPLED">NOT_SAMPLED</span> and are never
-          folded into coverage. A window that was 90% unsampled is reported as a window that was 90%
+        <h3 id="bento3">Witnessed Volume Settle</h3>
+        <p>Designed and <strong>not deployed.</strong> The registry witnesses fills through the same
+          subscription, so a forfeited bond could be split pro rata among the addresses it saw trading
+          that window, with self-match rejection and a per-address cap. That path was cut under K10.
+          The mechanism is in the design; it is not in this deployment, and no bond has been split.</p>
+      </div>
+      <div class="card">
+        <h3 id="bento4">Unfiltered Integrity (The Anti-Dashboard)</h3>
+        <p>Gaps are recorded as <span class="badge v-NOT_SAMPLED">NOT_SAMPLED</span> and never folded
+          into coverage. A window that was 90% unsampled is reported as a window that was 90%
           unsampled.</p>
       </div>
-      <div class="card">
-        <h3>Measurement, not a promise</h3>
-        <p><span class="badge v-COVERED_AT_SAMPLE">COVERED_AT_SAMPLE</span> is the strongest positive
-          state that exists. It means the envelope held at one instant. It does not mean the book held
-          between two instants, and nothing here says it does.</p>
-      </div>
     </div>
   </section>
 
-  <!-- ============ MARKETS (§3.4, §3.5) ============ -->
+  <!-- ============ §3.4 MARKET REGISTRY DIRECTORY ============ -->
   <section id="markets" class="hidden">
-    <h2>Live coverage</h2>
-    <p class="section-note">The commitment under measurement, and the samples the reactivity path has
-      written against it. Everything on this page is read from the chain when the page loads.</p>
-    <div id="commitmentCard"></div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head">
-        <span class="card-title">LIVE SAMPLE STREAM</span>
-        <span class="card-title" id="streamCount"></span>
-      </div>
+    <h2>Market registry directory</h2>
+    <p class="section-note">Every commitment this registry holds, read from chain. One market is under
+      measurement — PRD §27 scopes this phase to one, and K10 cut multi-market.</p>
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="Filter by Market ID, Symbol, or Maker address…">
+      <button class="pill" data-filter="all" aria-pressed="true">All</button>
+      <button class="pill" data-filter="COVERED_AT_SAMPLE">Covered at Sample</button>
+      <button class="pill" data-filter="breach">Active Breach</button>
+      <button class="pill" data-filter="uncovered">Uncovered</button>
+      <button class="pill" data-filter="baseline">Testnet Baseline</button>
+    </div>
+    <div class="card wrap-x">
       <div class="scroll"><table>
         <thead><tr>
-          <th>Block</th><th class="num">Bid</th><th class="num">Ask</th><th class="num">Spread</th>
-          <th class="num">Bid size</th><th class="num">Ask size</th><th>Verdict</th><th>Source</th><th>Block pin</th>
+          <th>Market</th><th>Maker</th><th>Committed envelope</th><th class="num">Posted bond</th>
+          <th>Last sample verdict</th><th>Actions</th>
         </tr></thead>
-        <tbody id="streamBody"><tr><td colspan="9" class="spin">reading the chain…</td></tr></tbody>
+        <tbody id="directoryBody"><tr><td colspan="6" class="spin-note">reading the chain…</td></tr></tbody>
       </table></div>
-      <p class="section-note" style="margin:14px 0 0" id="streamNote"></p>
     </div>
+
+    <!-- §3.5 MARKET DETAIL & LIVE VERIFICATION STREAM -->
+    <div id="detail"></div>
   </section>
 
-  <!-- ============ BREACH LEDGER (§3.7) ============ -->
+  <!-- ============ §3.7 BREACH EVIDENCE ============ -->
   <section id="ledger" class="hidden">
-    <h2>Breach ledger</h2>
+    <h2>Breach evidence</h2>
     <p class="section-note">Every breach records the sample that caused it. Open one and check it
       against the chain without taking our word for anything.</p>
-    <div id="breachBody" class="spin">reading the chain…</div>
+    <div id="breachBody" class="spin-note">reading the chain…</div>
   </section>
 
-  <!-- ============ VERIFIER (§3.7 stranger verification box) ============ -->
+  <!-- ============ VERIFIER ============ -->
   <section id="verify" class="hidden">
     <h2>Verify a breach yourself</h2>
     <p class="section-note">No account, no API key, and no access to anything of ours. A public RPC is
       enough. These commands are generated from the deployment record this page loaded.</p>
-    <div id="verifyBody" class="spin">reading the chain…</div>
+    <div id="verifyBody" class="spin-note">reading the chain…</div>
   </section>
 
-  <!-- ============ DOCS (§4 column 3) ============ -->
+  <!-- ============ DOCS ============ -->
   <section id="docs" class="hidden">
     <h2>What is measured, and what is not</h2>
     <p class="section-note">Read this before quoting any number on this site.</p>
-    <div class="card">
-      <div class="notice"><strong>Assize measures at instants, not continuously.</strong> A sample is
-        one reading at one block. It is not a window, not an average, and not proof that the book held
-        between two samples.</div>
-      <div class="notice"><strong>The sample count is not the observation count.</strong> The
-        subscription matches every log the pool emits, so a block with many pool events produces many
-        samples reading the same book at the same instant. None is fabricated; they are redundant.
-        The honest measure is the distinct-block count, and both are shown.</div>
-      <div class="notice"><strong>Nobody was paid.</strong> A forfeited bond stays in the registry.
-        There is no settlement function in this deployment at all.</div>
-      <div class="notice"><strong>The maker is us.</strong> Labelled
-        <span class="badge s-PROJECT_BASELINE">PROJECT_BASELINE</span> wherever it appears. Not a
-        third party, not adoption, not demand. It published a commitment it did not keep, which is
-        what it exists to do.</div>
-      <div class="notice"><strong>The block pin is a parent hash.</strong> A contract cannot observe
-        the hash of the block it is running in, so a sample stores block <em>N</em> with the hash of
-        <em>N−1</em>. Check it as <code>cast block N --field parentHash</code>. A verifier that treats
-        it as a block hash will reject every honest sample.</div>
-      <div class="notice"><strong>A keeper, if one were ever registered, is trusted while used.</strong>
-        Its only defence is that every sample pins a block. That is a real defence against writing
-        false values and a weak one against choosing moments. No keeper is registered.</div>
-    </div>
+    <div class="card" id="docsBody"></div>
   </section>
 </main>
 
 <footer>
   <div class="status-bar">
     <span id="statusLeft">Somnia Shannon: reading… · Reactivity precompile: reading… · Fallback keeper: idle</span>
-    <span>Upstream pinned via skills-lock.json</span>
+    <span>Commitment hash: pinned via skills-lock.json</span>
   </div>
   <div class="cols">
     <div>
       <h4>PROTOCOL</h4>
-      <p>A fixed public standard for quoting, with a penalty attached and a measurement that triggers it.</p>
-      <p>MIT licensed.</p>
+      <p>Fixed public standard for quoting verification and penalty settlement.</p>
+      <p>Open-source · MIT License</p>
     </div>
     <div>
       <h4>SURFACES</h4>
-      <a href="#" data-view="markets">Live coverage</a>
-      <a href="#" data-view="ledger">Breach ledger</a>
+      <a href="#" data-view="markets">Directory</a>
+      <a href="#" data-view="ledger">Breach Ledger</a>
+      <a href="#" id="footPublisher">Publisher Studio</a>
       <a href="#" data-view="verify">Verifier CLI</a>
     </div>
     <div>
-      <h4>RESOURCES</h4>
-      <a href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Somnia faucet</a>
+      <h4>RESOURCES &amp; DOCUMENTATION</h4>
+      <a href="#" data-view="docs">Phase progress &amp; kill criteria</a>
       <a href="https://docs.dreamdex.io/developers/event-contracts" target="_blank" rel="noopener">DreamDEX event contracts</a>
       <a href="https://docs.somnia.network/developer/reactivity" target="_blank" rel="noopener">Somnia reactivity</a>
+      <a href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Somnia faucet</a>
     </div>
     <div>
-      <h4>VERIFICATION</h4>
-      <a id="footRegistry" target="_blank" rel="noopener">Registry on the explorer</a>
-      <a id="footSubscriber" target="_blank" rel="noopener">Subscriber on the explorer</a>
-      <a href="#" data-view="docs">What is measured</a>
+      <h4>HACKATHON VERIFICATION PROOFS</h4>
+      <a id="footRegistry" target="_blank" rel="noopener">Shannon registry address</a>
+      <a id="footSubscriber" target="_blank" rel="noopener">Subscriber contract</a>
+      <a href="#" data-view="verify">Seed claims ledger</a>
     </div>
   </div>
-  <div class="bottom">Assize is built for the Somnia × DreamDEX hackathon. Testnet only. No real money and no token.</div>
+  <div class="bottom">Assize is built for the Somnia × DreamDEX Hackathon. Testnet only. No real money or tokens.</div>
 </footer>
+<div id="modalHost"></div>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

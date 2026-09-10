@@ -709,3 +709,53 @@ function disables the interpretation.
 
 Worth remembering for the symptom as much as the cause: the page looked built, rendered nothing, and
 the console blamed CORS. D-028.
+
+---
+
+## 2026-09-10 — The web surface, rebuilt against frontend.md
+
+**Outcome.** All thirteen specified-but-missing components built. The spacing scale is now derived
+from the document rather than invented. Verified in a headless browser at all three widths §6 names.
+
+### The audit that prompted it
+
+Absent and specified: Connect Wallet (§2.1); the "Publish Maker Commitment" CTA (§3.1); Box 2's
+copyable terminal (§3.3); the entire Market Registry Directory — search toolbar, five filter pills,
+six-column table, empty state (§3.4); the Handler Gas Gauge, the depth chart, the Stored Sample
+Inspector and the `NOT_SAMPLED` explainer row (§3.5); the entire Maker Commitment Publisher including
+the insufficient-STT state (§3.6); the breach page's explorer link (§3.7); and the Lucide icon set
+(§5.1), which the first build replaced with a hand-drawn glyph.
+
+Invented where the document is silent: card radius, padding, section rhythm, gaps — and one
+breakpoint at 900px where §6 asks for 390, 768, 1440.
+
+### What changed
+
+`frontend.md` speaks Tailwind throughout, so the stylesheet now declares Tailwind's default spacing
+and radius scales as named tokens and uses only those. Icons are extracted verbatim from
+`lucide-static` at build time. Breakpoints are §6's three, and none of them overflows horizontally.
+
+The publisher's step 3 dry-runs the envelope through `packages/reference` exactly as §3.6 asks, which
+turns out to be the most useful thing on the page: it tells a maker their proposed envelope would
+breach immediately against the current book, before they post a bond.
+
+### Two things the browser caught
+
+1. **The gas gauge was a meter that only moved at the end.** It divided the balance by the per-firing
+   floor and clamped to 100%, so it read full until the subscription was nearly dead. It now measures
+   callbacks the prefund can still pay for against a stated 1,000-callback budget, and says so.
+2. **Box 3, "Witnessed Volume Settle", describes a mechanism that is cut.** Rather than delete the
+   box and break the grid, it carries its specified title and states plainly that the mechanism is in
+   the design and not in this deployment, and that no bond has been split.
+
+### Commands
+
+```
+pnpm --filter @assize/web build          exit 0
+pnpm --filter @assize/web build:single   exit 0
+headless chromium, file:// origin        console errors: none
+  inspector renders                      true
+  pin verification confirms canonical    true
+  horizontal overflow at 390/768/1440    none
+pnpm check:vocabulary / no-address-literals / paths   exit 0
+```
