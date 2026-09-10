@@ -133,7 +133,29 @@ cast call $REG "sampleAt(uint256)((uint256,(uint128,uint128,uint128,uint128,uint
 cast block 484439389 --field parentHash --rpc-url $RPC
 ```
 
-**Do not take the registry's word for it.** From a clean clone, this re-derives every verdict with
+**Re-derive one breach with the CLI.** `packages/verifier` does the whole check in one command: it
+reads the stored sample and commitment from a public RPC, confirms the block pin against the block's
+parent hash, re-derives the verdict with `packages/reference`, and compares that against what the
+chain says. It never asks the registry for the verdict and then believes it.
+
+```sh
+pnpm assize verify 0
+```
+
+```
+ok    breach exists          breach 0 names sample 0 on commitment 0
+ok    sample stored          bid 686000 ask 714000 at block 484439389
+ok    block pin resolves     block 484439389 has parent 0x2b8acbba…, matching the pin
+ok    re-derived locally     packages/reference computes SPREAD_BREACH
+ok    verdicts agree         the chain also says SPREAD_BREACH
+ok    verdict is a breach    SPREAD_BREACH forfeits a bond
+PASS.
+```
+
+The registry address comes from the committed deployment record, so nothing needs configuring. There
+is no published npm package, so there is no `npx assize`: the CLI runs from a clone.
+
+**Or check every verdict at once.** From a clean clone, this re-derives every verdict with
 `packages/reference` — a second implementation of the evaluator, in TypeScript, running on your
 machine — and compares it against what the chain says:
 

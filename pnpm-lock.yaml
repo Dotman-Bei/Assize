@@ -21,6 +21,9 @@ importers:
       '@assize/reference':
         specifier: workspace:*
         version: link:packages/reference
+      '@assize/verifier':
+        specifier: workspace:*
+        version: link:packages/verifier
       '@types/node':
         specifier: ^22.20.2
         version: 22.20.2
@@ -86,6 +89,22 @@ importers:
       '@assize/protocol-types':
         specifier: workspace:*
         version: link:../protocol-types
+
+  packages/verifier:
+    dependencies:
+      '@assize/protocol-types':
+        specifier: workspace:*
+        version: link:../protocol-types
+      '@assize/reference':
+        specifier: workspace:*
+        version: link:../reference
+      viem:
+        specifier: ^2.21.55
+        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.2
+        version: 22.20.2
 
 packages:
 

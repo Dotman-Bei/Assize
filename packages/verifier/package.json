@@ -1,0 +1,15 @@
+{
+  "name": "@assize/verifier",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "assize": "./src/cli.ts" },
+  "main": "./src/verify.ts",
+  "exports": { ".": "./src/verify.ts" },
+  "dependencies": {
+    "@assize/protocol-types": "workspace:*",
+    "@assize/reference": "workspace:*",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": { "@types/node": "^22.20.2" }
+}

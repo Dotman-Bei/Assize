@@ -271,7 +271,7 @@ async function renderTeaser() {
   const state = VERDICT_STATES[Number(await read("verdictOf", [b.sampleId]))];
   const c = S.commitments.find((x) => x.id === b.commitmentId) ?? S.commitments[0];
   const s = rec.sample, spread = s.ask - s.bid;
-  const cmd = `assize verify ${b.sampleId} --rpc ${S.rpc}`;
+  const cmd = `pnpm assize verify 0`;
   $("#teaser").innerHTML = `
     <div style="display:flex;justify-content:space-between;gap:var(--s-3);flex-wrap:wrap;align-items:center">
       <div style="display:flex;gap:var(--s-2);align-items:center">${pill(state)}${src(sampleSourceFromCode(Number(s.source)))}</div>
@@ -434,7 +434,7 @@ async function dossier(r) {
   const s = r.rec.sample, spread = s.ask - s.bid, c = r.c;
   let pinOk = null;
   try { const blk = await S.client.getBlock({ blockNumber: s.blockNumber }); pinOk = blk.parentHash.toLowerCase() === s.blockHash.toLowerCase(); } catch { pinOk = null; }
-  const cmd = `npx assize verify ${r.b.sampleId} --rpc ${S.rpc}`;
+  const cmd = `pnpm assize verify ${r.i}`;
   $("#breachDossier").innerHTML = `
     <h2>Breach proof dossier</h2>
     <p class="h2-sub">Audit receipt for incident #BR-${String(r.i).padStart(5, "0")}.</p>
@@ -595,15 +595,20 @@ function renderClaim() {
 
 /* ── Page 6: verification playground ──────────────────────────────────────── */
 function renderCliDocs() {
-  const install = "npm install -g @assize/sdk";
-  const run = `assize verify <sampleId> --rpc https://dream-rpc.somnia.network`;
-  const clone = `git clone <repo> && cd assize && pnpm install\nSOMNIA_RPC_URL=https://dream-rpc.somnia.network \\\n  ASSIZE_REGISTRY_ADDRESS=<see deployment> pnpm claim:verify`;
+  const clone = `git clone --recurse-submodules <repo> && cd assize\npnpm install`;
+  const one = `pnpm assize verify 0`;
+  const all = `pnpm claim:verify`;
   $("#cliDocs").innerHTML = [
-    ["Install", install], ["Verify one breach", run], ["Or re-derive every verdict from a clean clone", clone],
+    ["1 · Clone and install", clone],
+    ["2 · Re-derive one breach", one],
+    ["3 · Or re-derive every recorded verdict", all],
   ].map(([label, cmd]) => `<div style="margin-bottom:var(--s-3)"><div class="stat-label">${label}</div>
     <div class="term" style="margin-top:6px"><button class="copy" data-copy="${esc(cmd)}">copy</button><pre>${esc(cmd)}</pre></div></div>`).join("")
-    + `<p class="h2-sub"><code>packages/verifier</code> is not published yet; <code>pnpm claim:verify</code>
-       in this repository performs the same re-derivation today.</p>`;
+    + `<p class="h2-sub">The registry address comes from the committed deployment record, so neither
+       command needs configuring. Both read a public RPC and nothing of ours.
+       <strong>There is no published npm package yet</strong>, so there is no
+       <code>npx assize</code> to run: the CLI lives in <code>packages/verifier</code> and runs from
+       a clone.</p>`;
 }
 
 async function runVerifier() {
