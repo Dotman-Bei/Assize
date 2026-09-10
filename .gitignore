@@ -24,3 +24,6 @@ contracts/test/fixtures/differential.*
 # Pinned upstream, fetched by `pnpm skills:install`, verified against
 # skills-lock.json. The lock is committed; the content is not ours to vendor.
 .skills/
+
+# Built static site. Rebuilt by pnpm --filter @assize/web build.
+apps/web/dist/

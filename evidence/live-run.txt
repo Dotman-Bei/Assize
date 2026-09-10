@@ -1,22 +1,22 @@
 Assize evidence — read from chain, not from our database
-generated 2026-09-10T05:42:30.205Z
-registry 0xa43d71fff5ecedc577a0623421a16c2d11dc6b61   chain 50312   head 484457085
+generated 2026-09-10T06:14:39.087Z
+registry 0xa43d71fff5ecedc577a0623421a16c2d11dc6b61   chain 50312   head 484476320
 
-samples observed in the scanned range: 5144
-distinct blocks sampled:               351
+samples observed in the scanned range: 8664
+distinct blocks sampled:               599
 
 verdicts, every state on its own line (PRD §14):
   NOT_SAMPLED             0
   SAMPLER_FAILED          0
   WINDOW_CLOSED           0
   ABSENT                  0
-  SPREAD_BREACH        5144
+  SPREAD_BREACH        8554
   DEPTH_BREACH            0
-  COVERED_AT_SAMPLE       0
+  COVERED_AT_SAMPLE     110
 
 sample source, in storage and on screen (AGENTS.md):
   UNLABELLED              0
-  REACTIVITY           5144
+  REACTIVITY           8664
   KEEPER                  0
 
 infrastructure: 0 log window(s) failed during the scan

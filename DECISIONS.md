@@ -714,3 +714,72 @@ what. No published figure quotes the sample count without the distinct-block cou
 observation corresponds to one instant. That reduces gas roughly thirteenfold as well. It is not done
 in this change because K10 protects G3, G4, G7, G9 and G12 in that order and the honest reporting
 closes the correctness gap; it is the first thing to fix if the campaign is extended.
+
+---
+
+## D-025: The frontend was not cut by K10, and treating it as cut was my error
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, correcting an earlier misreading
+
+**Evidence.** K10 says: "Cut payouts, cut multi-market, cut the claim flow. Protect G3, G4, G7, G9,
+and G12 in that order." I read that as settling the absence of a web app. It does not. It cuts one
+surface — the claim portal in `frontend.md` §3.8 — and the three gates it protects all need an app:
+G7 says "a stranger reaches the live app", G9 is a first-time user completing the core action, and
+PRD §24 makes "Working prototype on Shannon testnet — Live URL" a hard submission requirement.
+
+So the app was a gap, not a cut, and it was recorded as a cut for several commits.
+
+**Decision.** `apps/web` is built: a static page with no server and no database, reading the chain
+directly through a public RPC. That is the product's own claim applied to its interface — a page that
+had to be trusted would break the thesis. The claim portal is genuinely absent, because payouts are
+genuinely cut and a surface for claiming what nobody can claim would be a lie.
+
+**Cost.** Late. Had this been read correctly when K10 fired, the app would have had the hours that
+went to the feedback report instead.
+
+---
+
+## D-026: The sample stream shows one row per instant, not one per sample
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted
+
+**Evidence.** The first render of the live stream listed forty rows that were, in substance, three
+readings: the wildcard topic filter fires the handler on every pool log, so a block emitting thirteen
+logs produces thirteen samples of one instant. Every row was true and the table as a whole was
+misleading — it made the measurement look an order of magnitude richer than it is, which is the
+overstatement D-024 identified and the same defect PRD §14 forbids when it says a gap may never be
+folded into coverage.
+
+**Decision.** Consecutive samples reading the same book at the same block collapse to one row
+carrying a `×N` count. The count of distinct blocks leads the table header; the sample count follows
+it. Nothing is dropped and nothing is hidden — the repetition is stated as a number instead of
+performed as rows.
+
+**Cost.** A visitor cannot see each individual callback in the table. That is the right trade: the
+individual callbacks are on chain for anyone who wants them, and the table's job is to say how often
+the book was actually observed.
+
+---
+
+## D-027: `COVERED_AT_SAMPLE` now occurs on chain, and a README claim went stale
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted
+
+**Evidence.** The README's misleading-results section said "Every sample in this run is a breach …
+`COVERED_AT_SAMPLE` does not appear on chain yet." True when written. It stopped being true while the
+app was being built: the book tightened to a 14000 spread against a committed 15000, and the chain
+now records 110 `COVERED_AT_SAMPLE` against 8554 `SPREAD_BREACH` across 599 distinct blocks.
+
+This is the better outcome — the same commitment held at some instants and not at others, which is
+the measurement doing its job rather than a one-sided result — but it means a published claim was
+wrong for as long as it took to notice.
+
+**Decision.** The README now states which states have occurred and which have not, and says plainly
+that reaching all seven is shown by the differential rather than by this run.
+
+**Cost.** A general one, worth writing down: every number in a document about a live system has a
+shelf life. `pnpm evidence:report` regenerates the counts from chain, and any figure quoted by hand
+should be re-read from it before submission rather than trusted because it was true once.

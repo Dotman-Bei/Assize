@@ -34,15 +34,20 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
 
 ## What remains, in K10's protected order
 
-1. **G7 — the re-derivation half passes; the "live app" half does not exist.**
+1. **G7 — the re-derivation half passes; the app now exists but is not hosted.**
    Tested for real: a fresh `git clone`, `pnpm install`, and only the README's own commands. All five
    chain reads resolve, the block pin checks out against `cast block --field parentHash`, and
    `pnpm claim:verify` re-derived 25 of 25 stored samples with `packages/reference` and agreed with
    the chain every time — no account, no API key, no access to anything of ours.
 
-   G7 as written also says "a stranger reaches the live app". There is no web app: P4 was not built
-   and K10 protects G7, G9 and G12 over it. So G7 is **partly met**, and it is recorded that way
-   rather than claimed. What a stranger can do today is verify; what they cannot do is browse.
+   G7 as written also says "a stranger reaches the live app". `apps/web` is now built — a static
+   page reading the chain directly, with the live commitment, the sample stream grouped by instant,
+   the breach evidence and generated verification commands. It runs locally with
+   `pnpm --filter @assize/web dev`. **It is not deployed to a public URL**, which needs a hosting
+   account the owner holds. So G7 stays **partly met** until it is hosted.
+
+   Treating the app as cut by K10 was an error, corrected in D-025: K10 cuts the claim flow, not the
+   frontend, and the gates it protects need one.
 2. **G9** — three first-time users completing the core action unaided. Needs a UI, and needs people.
 3. **G12** — submission package. Done: README to the five beats, `DEPLOYMENT.md`, `SETUP.md`,
    `SECURITY.md`, `ARCHITECTURE.md`, `LICENSE`, `.env.example`, and the SDK and documentation

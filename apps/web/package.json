@@ -1,0 +1,18 @@
+{
+  "name": "@assize/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --serve"
+  },
+  "dependencies": {
+    "@assize/protocol-types": "workspace:*",
+    "@assize/reference": "workspace:*",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

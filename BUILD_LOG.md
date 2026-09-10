@@ -612,3 +612,71 @@ documents its own failure modes, including that a subscription can feed itself a
 one sentence that became a tested guard in `CoverageSubscriber`.
 
 Linked from the README. Filing it wherever the organisers asked is an owner action.
+
+---
+
+## 2026-09-10 — The web surface, and a correction
+
+**Outcome.** `apps/web` exists: a static page, no server and no database, reading Shannon directly
+through a public RPC. Verified in a headless browser against the live deployment.
+
+### The correction
+
+I had treated the absence of a web app as settled by K10. It was not. K10 cuts payouts, multi-market
+and the **claim flow** — one surface — and the three gates it protects all need an app: G7 says "a
+stranger reaches the live app", G9 is a first-time user completing the core action, and PRD §24 makes
+a live URL a hard submission requirement. The app was a gap recorded as a cut for several commits.
+D-025.
+
+### What was built
+
+Tokens, type scale, badge palette and layout are `frontend.md` §1 to §4 verbatim. Surfaces: hero with
+the anchor badge and the real latest on-chain sample; the verdict function running locally on numbers
+the visitor chooses, labelled as not being chain data; the bento; live coverage with the commitment
+and sample stream; breach evidence; generated verification commands; the documentation surface; and
+the footer status bar. The claim portal from §3.8 is absent, because payouts are cut and a surface
+for claiming what nobody can claim would be a lie.
+
+No address appears anywhere under `apps/`. The page fetches the deployment record at runtime, so
+`pnpm check:no-address-literals` passes over the app as it does over everything else.
+
+### What the browser test found
+
+Two things worth fixing, both found by looking rather than by reasoning:
+
+1. **Forty rows that were three readings.** The first render listed every sample, and the wildcard
+   filter fires the handler on every pool log — so a block emitting thirteen logs produced thirteen
+   identical rows. Each row was true and the table was misleading. Consecutive samples at the same
+   block and book now collapse to one row with a `×N` count, and the distinct-block count leads the
+   header. D-026.
+2. **The headline wrapped to five lines** at a 15ch measure. Widened.
+
+### And one claim went stale while I worked
+
+The README said "Every sample in this run is a breach … `COVERED_AT_SAMPLE` does not appear on chain
+yet." True when written; false an hour later. The book tightened to a 14000 spread against a
+committed 15000, and the chain now records:
+
+```
+samples 8664 · distinct blocks 599
+  SPREAD_BREACH      8554
+  COVERED_AT_SAMPLE   110
+  every other state     0
+```
+
+Both states on the same commitment, as the book moved — the measurement doing its job rather than a
+one-sided result. The README is corrected, and D-027 records the general lesson: every number in a
+document about a live system has a shelf life, and `pnpm evidence:report` is what re-reads them.
+
+### Commands
+
+```
+pnpm --filter @assize/web build     exit 0   dist/app.js 296K, no runtime CDN
+headless chromium against localhost  console errors: none
+pnpm check:no-address-literals       exit 0   over apps/ too
+pnpm check:vocabulary                exit 0
+```
+
+### Not done
+
+The app is not hosted. A public URL needs a hosting account, which is the owner's to supply.

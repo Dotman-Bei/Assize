@@ -72,10 +72,14 @@ A maker committed to a maximum spread of **15000** raw price units on that marke
 **forfeited**.
 
 ```
-samples observed:        5144        SPREAD_BREACH      5144
-distinct blocks sampled:  351        every other state     0
-                                     source: REACTIVITY 5144
+samples observed:        8664        SPREAD_BREACH      8554
+distinct blocks sampled:  599        COVERED_AT_SAMPLE   110
+                                     every other state     0
+                                     source: REACTIVITY 8664
 ```
+
+Both states occur, on the same commitment, as the book moved. That is the measurement working: the
+envelope held at some instants and not at others, and the chain records which.
 
 Read those two counts together. See *How this could mislead you*.
 
@@ -151,20 +155,22 @@ pnpm evidence:report     # the table above, regenerated from chain
 
 Read this section before quoting any number above.
 
-**5144 samples is not 5144 observations.** The subscription matches every log the pool emits, so a
+**8664 samples is not 8664 observations.** The subscription matches every log the pool emits, so a
 block with many pool events produces many samples that read the same book at the same instant. None
 is fabricated — each is a real callback that really read the book — but they are redundant. The
-honest measure of how often the book was observed is **351 distinct blocks**. Both numbers are
-printed; neither is dropped.
+honest measure of how often the book was observed is **599 distinct blocks**. Both numbers are
+printed, neither is dropped, and the live sample stream collapses each instant to one row with the
+repeat count beside it rather than listing it many times.
 
 **Assize measures at instants, not continuously.** A sample is one reading at one block. It is not a
 window, not an average, and not proof that the book held between two samples. No claim here says
 otherwise.
 
-**Every sample in this run is a breach.** The book never came back inside the committed envelope
-while the window ran, so `COVERED_AT_SAMPLE` does not appear on chain yet. That the evaluator can
-distinguish the states is shown by `pnpm test:differential`, which agrees across 10,000 generated
-pairs and reaches all seven — not by this run, which reached one.
+**Two of the seven states have occurred, not all of them.** This run has produced
+`SPREAD_BREACH` and `COVERED_AT_SAMPLE`. `DEPTH_BREACH`, `ABSENT`, `WINDOW_CLOSED`, `NOT_SAMPLED` and
+`SAMPLER_FAILED` have not, because the conditions that produce them did not arise. That the evaluator
+reaches all seven is shown by `pnpm test:differential`, which agrees across 10,000 generated pairs —
+not by this run.
 
 **Nobody was paid.** Assize records that a bond is forfeited. It does not distribute it. The payout
 and claim path were cut under the project's own kill criteria (K10) when the submission window got
@@ -188,6 +194,18 @@ that checks it as a block hash will reject every honest sample.
 - The handler reads the top of the book only — best bid and best ask.
 - Somnia's public RPC serves neither `eth_getProof` nor EIP-1898 block-hash parameters, so
   `forge script` and `forge test --fork-url` do not work against it. Deployment used `cast send`.
+
+## The app
+
+`apps/web` is a static page with no server and no database behind it. It reads the chain directly
+through a public RPC, which is the product's claim applied to its own interface: if this page had to
+be trusted, the thesis would be broken. Build it with `pnpm --filter @assize/web build`, or run
+`pnpm --filter @assize/web dev` and open `http://localhost:5173`.
+
+It carries the live commitment, the sample stream grouped by instant, the breach evidence, and the
+verification commands generated from the deployment record it loaded. The claim portal from the
+design specification is absent: payouts were cut under K10, and a surface for claiming something
+nobody can claim would be a lie.
 
 ## Feedback to the organisers
 
