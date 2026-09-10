@@ -44,7 +44,11 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
    and K10 protects G7, G9 and G12 over it. So G7 is **partly met**, and it is recorded that way
    rather than claimed. What a stranger can do today is verify; what they cannot do is browse.
 2. **G9** — three first-time users completing the core action unaided. Needs a UI, and needs people.
-3. **G12** — submission package: README to the five beats, demo video, feedback report.
+3. **G12** — submission package. Done: README to the five beats, `DEPLOYMENT.md`, `SETUP.md`,
+   `SECURITY.md`, `ARCHITECTURE.md`, `LICENSE`, `.env.example`, and the SDK and documentation
+   feedback report (`FEEDBACK.md`, eight findings with reproductions and payloads).
+   Outstanding and owner-held: the demo video, filing `FEEDBACK.md` wherever the organisers asked,
+   and submitting. The repository must also be made public.
 
 Not attempted, and not to be claimed: G5 (payout) and G6 (a sustained 24h campaign).
 

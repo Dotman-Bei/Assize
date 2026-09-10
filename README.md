@@ -189,6 +189,16 @@ that checks it as a block hash will reject every honest sample.
 - Somnia's public RPC serves neither `eth_getProof` nor EIP-1898 block-hash parameters, so
   `forge script` and `forge test --fork-url` do not work against it. Deployment used `cast send`.
 
+## Feedback to the organisers
+
+`FEEDBACK.md` — eight findings from building this, each reproducible from a clean environment, with
+exact versions and payloads. The expensive one is finding 6: a reactivity handler that runs out of
+gas is charged and writes nothing, and from outside is indistinguishable from a subscription that
+never fired. It cost us a deployment.
+
+It also records what worked, including the reactivity reference documenting that a subscription can
+feed itself — one sentence that we turned into a tested guard.
+
 ## Repository layout
 
 ```

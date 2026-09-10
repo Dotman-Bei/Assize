@@ -38,6 +38,7 @@ const SCANNED_DOCUMENTS = [
   "DEPLOYMENT.md",
   "SECURITY.md",
   "ARCHITECTURE.md",
+  "FEEDBACK.md",
 ] as const;
 
 /** The rule's own rulebook. See the module comment. */

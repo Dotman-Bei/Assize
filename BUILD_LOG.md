@@ -583,3 +583,32 @@ git clone … && pnpm install                 exit 0
 pnpm claim:verify (from the clone)          exit 0   25/25 re-derived
 pnpm check:vocabulary                        exit 0
 ```
+
+---
+
+## 2026-09-10 — The SDK and documentation feedback report
+
+`FEEDBACK.md`. PRD §20 treats this as required rather than optional and demands real friction with
+reproducible steps, exact versions, and payloads. Eight findings, all re-captured from a live node
+while writing rather than quoted from notes:
+
+1. `marketCreatorEventsAbi` cannot be imported by subpath — and it carries `MarketCreated`, the only
+   publication of a `marketId`. The official template hits this too and works around it with a
+   relative path that does not survive a pnpm workspace.
+2. `eth_getProof` is not served, so `forge script` and `forge test --fork-url` do not work. The
+   surfaced error names neither the method nor the reason.
+3. EIP-1898 block-hash parameters rejected; `-32602` is used both for "unsupported shape" and "bad
+   arguments", which is why 2 took so long to diagnose.
+4. `eth_getStorageAt` returns a bare `0x` rather than a 32-byte word, on an address that has code.
+5. `DEFAULT_HANDLER_GAS_LIMIT` of 10,000,000 against the automatic-removal rule means a 0.06 STT
+   balance floor at every firing. Documented in two places that never reference each other.
+6. A handler that runs out of gas is charged, writes nothing, and is indistinguishable from a
+   subscription that never fired. **The expensive one — it cost us a deployment.**
+7. `OrderBookLevel` is flagged unconfirmed upstream; we confirmed it live and published the reading.
+8. The 1000-block `eth_getLogs` cap appears only in a code comment in the starter template.
+
+The report also records what worked, in specific terms rather than politely: the reactivity reference
+documents its own failure modes, including that a subscription can feed itself and drain its owner —
+one sentence that became a tested guard in `CoverageSubscriber`.
+
+Linked from the README. Filing it wherever the organisers asked is an owner action.
