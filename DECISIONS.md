@@ -493,3 +493,54 @@ that the minimum is checked only at creation and is not an escrow. This surfaced
 subscriber's minimum balance, and a per-callback gas budget, on top of ordinary deployment gas.
 PRD §26 K8 governs if the faucet cannot supply it — shrink the window, publish exactly what the
 funding bought, and never present a shortened window as a full one.
+
+---
+
+## D-018: The book layout is confirmed against a live pool; fork testing is not available
+
+**Date:** 2026-09-10, Phase P2
+**Status:** accepted
+
+**Why this needed settling.** Assize's entire measurement is the top of a DreamDEX book, so the shape
+of what `getBookLevels` returns is the most load-bearing protocol fact in the product. The pinned
+starter template flags `OrderBookLevel` as the one struct to confirm against a deployed pool before
+relying on it. D-012 recorded that the pinned SDK's `BookLevel` agrees with it — but two documents
+agreeing is not a chain agreeing, and PRD §17 wants protocol facts read at runtime.
+
+**Confirmed, against a live pool on Shannon.** `getBookLevels(bool,uint64)` returns
+`(uint256 price, uint256 quantity)[]`, best price first on both sides. Prices are probabilities in
+the pool's own units: a real book read at the time of writing showed a best bid of 457000 and a best
+ask of 482000, with `getBinaryPoolParams().oneCollateral` reading 1000000 — so 0.457 against 0.482,
+and a spread of 25000 raw, which renders as 250 basis points of one whole contract exactly the way
+`frontend.md` §3.2 renders one. That is independent confirmation of D-011's absolute-spread rule from
+the chain rather than from the document that prompted it.
+
+This is not a one-off command. `scripts/probe/book.ts` performs the check, `pnpm probe:dreamdex` runs
+it whenever a market is configured, and it is therefore covered by gate G1. It asserts what
+distinguishes the two fields — a price is a probability and so lies strictly inside
+`(0, oneCollateral)`, where a quantity does not — so a swapped field order is detected rather than
+assumed away. `oneCollateral` is read from the pool every time and never compiled in.
+
+**Fork testing is not available on Shannon's public RPC.** `contracts/test/ForkSampling.t.sol` would
+have sampled a real book end to end through `CoverageSubscriber`. It cannot run, because both
+published endpoints:
+
+- return `method not found` (-32601) for `eth_getProof`;
+- reject EIP-1898 block-hash parameters (-32602), which is what forge uses to pin a fork;
+- answer `eth_getStorageAt` with a bare `0x` instead of a 32-byte word;
+- reject a block parameter sent as a JSON number rather than a hex string.
+
+Each was tested directly against both `dream-rpc.somnia.network` and
+`api.infra.testnet.somnia.network`. Historical state itself is retained — balances resolve 10,000
+blocks back — so this is a JSON-RPC surface limitation, not a pruning one.
+
+The test is kept, skipping, rather than deleted. AGENTS.md forbids deleting or skipping a failing
+test to make CI pass, and the spirit of that rule is about tests that reveal defects; this one fails
+on an endpoint's capabilities, not on anything in this repository, and it will work unchanged against
+an archive node. Deleting it would also lose the record of why it cannot run.
+
+**Cost.** Path R is not yet exercised end to end against real chain state. The layout it depends on
+is confirmed live, and the handler's logic is covered by fixtures, but the join between them is
+proven only by deployment — which is gate G3, and which needs the funds and key the owner holds.
+Recorded for the SDK and documentation feedback report (PRD §20), alongside the SDK's unexported
+`dist/eventsAbi.js`.

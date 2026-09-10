@@ -17,6 +17,7 @@ import { pathToFileURL } from "node:url";
 import { SOMNIA_TESTNET_ADDRESSES } from "@somnia-chain/markets-sdk";
 import { createPublicClient, http, type AbiEvent } from "viem";
 
+import { probeBook } from "./probe/book.js";
 import { GET_LOGS_MAX_SPAN, loadMarketCreatorEventsAbi, type MarketCreatedArgs } from "./probe/dreamdex-sdk.js";
 import { passed, printResults, readChainId, requireEnv, type ProbeResult } from "./probe/shared.js";
 
@@ -182,13 +183,21 @@ export async function probeDreamdex(): Promise<ProbeResult[]> {
     return results;
   }
 
+  const stillLive = target.expiry > nowSeconds;
   results.push({
     check: "configured market",
-    status: target.expiry > nowSeconds ? "OK" : "PROTOCOL_CONFIG_CHANGED",
+    status: stillLive ? "OK" : "PROTOCOL_CONFIG_CHANGED",
     detail:
       `${target.asset} pool=${target.pool} expiry=${target.expiry} `
-      + `interval=${target.intervalSec}s ${target.expiry > nowSeconds ? "live" : "EXPIRED"}`,
+      + `interval=${target.intervalSec}s ${stillLive ? "live" : "EXPIRED"}`,
   });
+  if (!stillLive) {
+    return results;
+  }
+
+  // The book read is what Assize actually samples, so its shape is confirmed
+  // against the live pool rather than taken from the documents that describe it.
+  results.push(...(await probeBook(rpcUrl, target.pool)));
   return results;
 }
 

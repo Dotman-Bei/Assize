@@ -378,3 +378,74 @@ pnpm check:vocabulary        exit 1 -> exit 0 after rewording one comment ("safe
 
 No subscription created, no sample written, no breach recorded against a live market. G3, G4 and G11
 are all untouched.
+
+---
+
+## 2026-09-10 — The book layout, confirmed against a live pool
+
+**Outcome.** The most load-bearing protocol fact in the product is now checked against the chain on
+every probe run, rather than inferred from documents. Fork testing turned out to be unavailable on
+Shannon's public RPC; that is recorded rather than worked around.
+
+### What was confirmed, and why it needed confirming
+
+Assize samples the top of a DreamDEX book, so the shape of `getBookLevels` is what everything else
+rests on. The pinned template flags `OrderBookLevel` as the one struct to confirm against a deployed
+pool. D-012 noted the pinned SDK agrees with it — but two documents agreeing is not a chain agreeing.
+
+Read from a live pool:
+
+```
+getBookLevels(true, 5)  -> [(485000, 200000000), (474000, 330000000), (463000, 460000000)]
+getBookLevels(false, 5) -> [(514000, 200000000), (525000, 330000000), (536000, 460000000)]
+getBinaryPoolParams().oneCollateral -> 1000000
+```
+
+`(price, quantity)`, best price first on both sides, prices as probabilities in 1e6 units — 0.485
+against 0.514. The spread of 29000 raw renders as 290 basis points of one whole contract, which is
+`frontend.md` §3.2's convention exactly. That is the chain independently confirming D-011's
+absolute-spread rule, which had been derived from the document that prompted it.
+
+This is not a command someone once ran. `scripts/probe/book.ts` performs the check, `pnpm
+probe:dreamdex` runs it whenever a market is configured, and gate G1 therefore covers it. It asserts
+the property that tells the two fields apart — a price is a probability and lies strictly inside
+`(0, oneCollateral)`, a quantity does not — so a swapped field order is caught rather than assumed
+away. `oneCollateral` is read every run and never compiled in.
+
+### Fork testing: four findings, all against both endpoints
+
+`contracts/test/ForkSampling.t.sol` would have sampled a real book end to end through
+`CoverageSubscriber`. It cannot run. Both `dream-rpc.somnia.network` and
+`api.infra.testnet.somnia.network`:
+
+| call | result |
+|---|---|
+| `eth_getProof` | `method not found` (-32601) |
+| EIP-1898 `{"blockHash": …}` block param | `invalid parameters` (-32602) |
+| `eth_getStorageAt` | returns a bare `0x`, not a 32-byte word |
+| block param as a JSON number | `invalid parameters` (-32602) |
+
+forge's fork backend needs those, and fails in `setUp` with "failed to get account". Historical state
+itself is retained — balances resolve 10,000 blocks back — so this is a JSON-RPC surface limitation
+rather than pruning. Diagnosed by testing each call directly rather than by guessing at the error.
+
+The test is kept, skipping, not deleted. AGENTS.md forbids deleting or skipping a failing test to
+make CI pass; that rule is about tests revealing defects, and this one fails on an endpoint's
+capabilities rather than on anything here. It will work unchanged against an archive node, and
+deleting it would lose the record of why it cannot run.
+
+### Commands
+
+```
+cast call <pool> "getBookLevels(bool,uint64)((uint256,uint256)[])" true 5    live read
+pnpm probe:dreamdex   (with a market configured)   exit 0   book layout confirmed
+forge test                                          exit 0   50 passed, 3 skipped, 7 suites
+pnpm typecheck / check:vocabulary                   exit 0
+```
+
+### For the feedback report (PRD §20)
+
+Two items now: the SDK does not list `dist/eventsAbi.js` in its `exports`, so `marketCreatorEventsAbi`
+— which carries the only publication of a `marketId` — must be reached by resolving the package root;
+and the public RPC's missing `eth_getProof` / EIP-1898 support makes `forge test --fork-url`
+unusable against Shannon.
