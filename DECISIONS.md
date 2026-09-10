@@ -1155,3 +1155,30 @@ imply a five-step process that completes, which is the one thing the page must n
 and do not do, and those sentences are no longer anywhere on the page. The Overview's own cards and
 the boundaries box cover the same ground less directly. If a reader wanted to know what "Deterministic
 verdict" means in detail, the page no longer tells them; the Verifier tab does, by running it.
+
+---
+
+## D-040: The wallet control is hidden on Overview only
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction
+
+**Evidence.** The owner asked for the Connect Wallet control to be removed from the nav on the
+Overview page and nowhere else. It is now toggled by route rather than deleted: hidden on `/`, present
+on `/markets`, `/publish`, `/breaches`, `/claim` and `/verify`. Verified in both directions, including
+navigating back to Overview, so it is not a one-way toggle.
+
+The reasoning that makes it more than a preference: Overview reads the chain and asks nothing of the
+visitor. Every other route either signs a transaction or reports against a connected address, so the
+control belongs on those and is noise on the first screen.
+
+**A defect this exposed.** `.hidden` was defined only as `.page.hidden`, scoped to page sections.
+Toggling that class on anything else did nothing at all, silently. The first implementation looked
+correct, ran without error, and had no effect. A generic `.hidden` utility now exists. Worth
+remembering that a class name which reads like a utility but is scoped to one selector will fail
+quietly every time it is reused.
+
+**Cost.** A first-time visitor on Overview has no visible way to connect, so the path to publishing a
+commitment now begins by choosing a tab. §2 already lost its "+ Post Commitment" button under D-033,
+so Overview's hero CTA is the only prompt toward `/publish` left on that screen. That is fine while
+the hero carries it, and worth re-checking at G9 if a tester stalls on the first screen.

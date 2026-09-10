@@ -938,3 +938,16 @@ and qualifier pairs, the fifth is flagged, no console errors, no overflow at 390
 
 The per-step detail panel is gone with the interaction, and that is a real loss recorded in D-039:
 four steps had sentences explaining what they do and do not do, and those are no longer on the page.
+
+---
+
+## 2026-09-10 — Wallet control hidden on Overview
+
+Toggled by route rather than deleted: hidden on `/`, present on the five other routes. Verified in
+both directions including the return to Overview, and the health indicator stays put on every route.
+
+The change surfaced a quiet defect. `.hidden` existed only as `.page.hidden`, scoped to page
+sections, so toggling that class on a button did nothing — no error, no effect, and a first
+implementation that looked right. A generic `.hidden` utility now exists. A class that reads like a
+utility but is scoped to one selector fails silently every time it is reused, which is worth
+remembering. D-040.

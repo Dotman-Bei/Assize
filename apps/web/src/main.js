@@ -122,6 +122,10 @@ function route() {
   const target = known.includes(path) ? path : "/";
   $$("[data-page]").forEach((p) => p.classList.toggle("hidden", p.dataset.page !== target));
   $$("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.route === target ? "page" : "false"));
+  // The wallet control is hidden on Overview only. Overview reads the chain and
+  // asks nothing of the visitor; every other route either signs a transaction or
+  // reports against a connected address, so the control belongs there.
+  $("#wallet").classList.toggle("hidden", target === "/");
   window.scrollTo({ top: 0 });
   if (target === "/publish") renderPublish();
   if (target === "/claim") renderClaim();

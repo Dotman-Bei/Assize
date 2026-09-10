@@ -95,6 +95,9 @@ nav.tabs a[aria-current="page"] { color: var(--text-primary); background: var(--
 main { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-5); }
 .page { padding: var(--s-12) 0 var(--s-16); }
 .page.hidden { display: none; }
+/* Utility. Scoped only to .page before now, so toggling it on anything else
+   silently did nothing. */
+.hidden { display: none !important; }
 
 /* ── §3 Page 1 hero: Midday minimalist centered grid ──────────────────────── */
 .hero { text-align: center; padding: var(--s-20) 0 var(--s-12); }
