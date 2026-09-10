@@ -59,7 +59,8 @@ if (process.argv.includes("--single")) {
   const ctx = await context(options);
   await ctx.watch();
   const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json" };
-  createServer((req, res) => {
+  const port = Number(process.env.PORT ?? 5173);
+  const server = createServer((req, res) => {
     const path = (req.url ?? "/").split("?")[0];
     const file = path === "/" ? "index.html" : path.slice(1);
     try {
@@ -69,7 +70,22 @@ if (process.argv.includes("--single")) {
     } catch {
       res.writeHead(404).end("not found");
     }
-  }).listen(5173, () => process.stdout.write("http://localhost:5173\n"));
+  });
+  // A port already in use is an ordinary situation, not a crash. The default
+  // behaviour throws an unhandled 'error' event and prints a stack trace that
+  // says nothing about what to do.
+  server.on("error", (error) => {
+    if (error.code === "EADDRINUSE") {
+      process.stderr.write(
+        `Port ${port} is already serving something.\n`
+        + `  If it is an older copy of this server, stop it:  pkill -f "build.mjs --serve"\n`
+        + `  Or pick another port:                            PORT=5174 pnpm --filter @assize/web dev\n`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  });
+  server.listen(port, () => process.stdout.write(`http://localhost:${port}\n`));
 } else {
   await build(options);
   process.stdout.write("built apps/web/dist\n");

@@ -16,6 +16,9 @@ const VERDICTS = [
 ] as const;
 const SOURCES = ["UNLABELLED", "REACTIVITY", "KEEPER"] as const;
 
+/** 1000-block windows to walk back. Somnia caps eth_getLogs at 1000 per call. */
+const SCAN_WINDOWS = 30;
+
 const sampleRecorded = parseAbiItem(
   "event SampleRecorded(uint256 indexed sampleId, uint256 indexed commitmentId, uint8 verdict, uint8 source, uint64 blockNumber, bytes32 blockHash, uint128 bid, uint128 ask, uint128 bidSize, uint128 askSize)",
 );
@@ -30,10 +33,24 @@ async function main(): Promise<void> {
   const client = createPublicClient({ transport: http(rpcUrl) });
   const head = await client.getBlockNumber();
 
+  // The registry's own totals, which are cumulative and independent of any scan
+  // window. Reported alongside the scan because a log scan on a chain producing
+  // a block every 100ms covers minutes, not history: 30,000 blocks is under an
+  // hour. Without these two numbers beside it, a scan that finds nothing reads
+  // as "nothing ever happened" rather than "nothing happened lately".
+  const registryAbi = [
+    { type: "function", name: "sampleCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+    { type: "function", name: "breachCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  ] as const;
+  const [totalSamples, totalBreaches] = await Promise.all([
+    client.readContract({ address: registry, abi: registryAbi, functionName: "sampleCount" }),
+    client.readContract({ address: registry, abi: registryAbi, functionName: "breachCount" }),
+  ]);
+
   // Somnia caps eth_getLogs at 1000 blocks, so walk backwards in windows.
   const logs = [];
   let failedWindows = 0;
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < SCAN_WINDOWS; i += 1) {
     const toBlock = head - BigInt(i) * 1000n;
     if (toBlock <= 0n) break;
     try {
@@ -60,6 +77,15 @@ async function main(): Promise<void> {
   lines.push(`Assize evidence — read from chain, not from our database`);
   lines.push(`generated ${new Date().toISOString()}`);
   lines.push(`registry ${registry}   chain ${await client.getChainId()}   head ${head}`);
+  lines.push(``);
+  lines.push(`TOTALS, read from the registry and cumulative since deployment:`);
+  lines.push(`  samples recorded:  ${totalSamples}`);
+  lines.push(`  breaches recorded: ${totalBreaches}`);
+  lines.push(``);
+  lines.push(`The rest of this report covers a log scan of the last ${SCAN_WINDOWS * 1000} blocks`);
+  lines.push(`(${head - BigInt(SCAN_WINDOWS * 1000)} to ${head}). Somnia produces a block every 100ms,`);
+  lines.push(`so that window is well under an hour. A count of zero below means nothing was sampled`);
+  lines.push(`in the last hour — not that nothing was ever sampled. The totals above are the record.`);
   lines.push(``);
   lines.push(`samples observed in the scanned range: ${logs.length}`);
   lines.push(`distinct blocks sampled:               ${blocks.size}`);

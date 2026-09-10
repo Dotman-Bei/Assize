@@ -1,189 +1,170 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Assize — a quoting commitment, sampled on chain</title>
-<meta name="description" content="A market maker publishes a quoting commitment, backs it with a bond, and the chain samples whether the commitment held.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2308090C'/%3E%3Cpath d='M12 3v18M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1M7 21h10' stroke='%23F8FAFC' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Assize — Liquidity is a promise. Assize enforces the bond.</title>
+<meta name="description" content="Turn unverified prediction market liquidity into an on-chain, sampled commitment.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2308080a'/%3E%3Cpath d='M12 3v18M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1M7 21h10' stroke='%23f4f4f5' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<!-- ============ §2.1 STICKY TOP NAVIGATION ============ -->
+<!-- ═══ §2 GLOBAL APP SHELL ═══ -->
 <header class="top">
-  <span id="logo"></span>
-  <span class="wordmark">ASSIZE</span>
-  <span class="env-pill">SHANNON TESTNET</span>
-  <nav class="tabs" id="tabs">
-    <button data-view="markets" aria-current="true">Live Markets</button>
-    <button data-view="ledger">Breach Ledger</button>
-    <button data-view="verify">Verifier CLI</button>
-    <button data-view="docs">Documentation &amp; Phase</button>
+  <span class="brand">ASSIZE</span>
+  <span class="brand-rule"></span>
+  <nav class="tabs">
+    <a href="#/" data-route="/">Overview</a>
+    <a href="#/markets" data-route="/markets">Markets</a>
+    <a href="#/publish" data-route="/publish">Publish</a>
+    <a href="#/breaches" data-route="/breaches">Breaches</a>
+    <a href="#/claim" data-route="/claim">Claims</a>
+    <a href="#/verify" data-route="/verify">Verifier</a>
   </nav>
-  <span class="gas-pill" id="gasPill"><span class="dot"></span><span id="gasText">reading handler funding…</span></span>
-  <a class="faucet" id="faucetLink" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener"
-     title="Somnia dev group, faucet topic — request testnet STT and tUSDC">Faucet</a>
-  <button class="wallet" id="connect">Connect Wallet</button>
+  <span class="health"><span class="pulse"></span><span id="health">Somnia Shannon</span></span>
+  <a class="navlink" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Faucet</a>
+  <button class="btn btn-white" data-nav="/publish">+ Post Commitment</button>
+  <button class="wallet-pill" id="wallet">Connect Wallet</button>
 </header>
 
 <main>
-  <!-- ============ §3.1 HERO ============ -->
-  <section id="hero">
-    <span class="anchor-badge">SOMNIA REACTIVITY PRECOMPILE × DREAMDEX EVENT CONTRACTS</span>
-    <h1>Liquidity is a quoting commitment backed by an on-chain bond.</h1>
-    <p class="sub">DreamDEX order books are sampled at discrete instants using Somnia validator-driven
-      callbacks. When a maker breaches committed spread or depth, the bond forfeits pro rata to
-      traders witnessed in that window.</p>
-    <div class="notice warn">
-      <strong>What this deployment does, exactly.</strong> It measures and it records. It does not
-      settle. A bond is recorded as forfeited and no trader is paid, because the payout path was cut
-      under this project's own kill criteria when the submission window got short. Nothing here
-      implies anyone was made whole.
-    </div>
-    <div class="cta-row">
-      <button class="btn btn-primary" data-view="markets">Inspect Live Markets</button>
-      <button class="btn btn-secondary" id="openPublisher">Publish Maker Commitment</button>
-      <button class="btn btn-ghost" data-view="verify" id="verifyCta">Verify a Breach via CLI</button>
-    </div>
-
-    <div class="grid-2" style="margin-top:36px">
-      <div class="card">
-        <div class="card-head">
-          <span class="card-title" id="latestHead">LATEST ON-CHAIN SAMPLE</span>
-          <span class="badge s-REACTIVITY">source: REACTIVITY</span>
-        </div>
-        <div id="latestBody" class="spin-note">reading the chain…</div>
-      </div>
-      <div class="card">
-        <div class="card-head"><span class="card-title" id="evalTitle">THE VERDICT FUNCTION, RUN IN YOUR BROWSER</span></div>
-        <p class="section-note" style="margin:0 0 14px">
-          Not chain data. This runs the same pure evaluator the contract runs, on numbers you choose,
-          so you can watch the states change. Move the spread past the committed bound.
-        </p>
-        <label class="field">SAMPLED SPREAD — <span id="spreadOut" class="mono">0</span> raw</label>
-        <input type="range" id="spread" min="0" max="60000" step="500" value="8000">
-        <label class="field" style="margin-top:14px">SIZE ON EACH SIDE — <span id="sizeOut" class="mono">0</span></label>
-        <input type="range" id="size" min="0" max="300000000" step="10000000" value="200000000">
-        <div style="margin-top:16px" class="mono" id="evalOut"></div>
+  <!-- ═══ PAGE 1: OVERVIEW ═══ -->
+  <section class="page" data-page="/">
+    <div class="hero">
+      <span class="eyebrow">Built for Somnia Shannon × DreamDEX Event Contracts</span>
+      <h1>Liquidity is a promise. Assize enforces the bond.</h1>
+      <p>Turn unverified prediction market liquidity into an on-chain, sampled commitment. When a
+        market maker's spread widens or depth pulls, the bond forfeits directly to witnessed traders.</p>
+      <div class="hero-cta">
+        <button class="btn btn-white" data-nav="/markets">Explore Monitored Markets</button>
+        <button class="btn btn-outline" data-nav="/publish">Post a Commitment</button>
+        <button class="btn btn-ghost" data-nav="/verify">Verify a Breach</button>
       </div>
     </div>
 
-    <!-- ============ §3.3 BENTO GRID ============ -->
-    <div class="bento" style="margin-top:36px">
+    <!-- Section 2: live protocol telemetry bento -->
+    <div class="grid g4" id="telemetry"></div>
+
+    <!-- Section 3: problem vs mechanism -->
+    <div class="grid g2" style="margin-top:var(--s-3)">
       <div class="card">
-        <h3 id="bento1">Instant Reactive Sampling (Path R)</h3>
-        <p>A subscription on the pool wakes the registry when the market emits. Validators invoke the
-          handler as a synthetic transaction, it reads the book at that instant, and the sample is
-          written on chain. Nobody sends a transaction to make it happen.</p>
+        <h2>The Residual Price Fallacy</h2>
+        <p class="h2-sub" style="margin:0">A prediction market shows a price produced by an order
+          book, and an order book can be empty. On a thin book the number on screen is the residue of
+          whoever quoted last, not an offer anyone will fill. A trader arrives, sizes up, finds no
+          counterparty, and leaves — and nothing anywhere records that it happened. The market's page
+          looks identical the next day.</p>
       </div>
       <div class="card">
-        <h3 id="bento2">Zero-Trust Stranger Verification</h3>
-        <p>The verdict is a pure function of a stored sample and a stored commitment, so anyone can
-          re-derive it from a public RPC with a second implementation.</p>
-        <div class="term" style="margin-top:12px"><button class="copy" data-copy="pnpm claim:verify">copy</button><span id="bentoCmd">pnpm claim:verify</span></div>
+        <h2>Reactivity-Driven Enforcement</h2>
+        <p class="h2-sub" style="margin:0">Somnia's reactivity precompile invokes a handler when the
+          market emits, so validators — not us — drive the measurement. The handler reads the book at
+          that instant, writes a block-pinned sample, and the registry evaluates a deterministic
+          verdict from stored data alone. A breach forfeits the maker's bond on chain.</p>
       </div>
-      <div class="card">
-        <h3 id="bento3">Witnessed Volume Settle</h3>
-        <p>Designed and <strong>not deployed.</strong> The registry witnesses fills through the same
-          subscription, so a forfeited bond could be split pro rata among the addresses it saw trading
-          that window, with self-match rejection and a per-address cap. That path was cut under K10.
-          The mechanism is in the design; it is not in this deployment, and no bond has been split.</p>
-      </div>
-      <div class="card">
-        <h3 id="bento4">Unfiltered Integrity (The Anti-Dashboard)</h3>
-        <p>Gaps are recorded as <span class="badge v-NOT_SAMPLED">NOT_SAMPLED</span> and never folded
-          into coverage. A window that was 90% unsampled is reported as a window that was 90%
-          unsampled.</p>
-      </div>
+    </div>
+
+    <!-- Section 4: five-step lifecycle -->
+    <h2 style="margin-top:var(--s-10)">The deterministic protocol lifecycle</h2>
+    <p class="h2-sub">Five steps. Select one to read what it does and what it does not.</p>
+    <div class="steps" id="lifecycle"></div>
+    <div id="lifecycleDetail"></div>
+
+    <!-- Section 5: live breach proof teaser -->
+    <h2 style="margin-top:var(--s-10)">Latest recorded breach</h2>
+    <p class="h2-sub">Read from chain when this page loaded, not from a database.</p>
+    <div id="teaser" class="card flat"><span class="muted">reading the chain…</span></div>
+
+    <!-- Section 6: hard protocol boundaries -->
+    <h2 style="margin-top:var(--s-10)">Hard protocol boundaries</h2>
+    <p class="h2-sub">The disclosures an auditor should read before any number above.</p>
+    <div class="card flat" id="boundaries"></div>
+  </section>
+
+  <!-- ═══ PAGE 2A: MARKETS DIRECTORY ═══ -->
+  <section class="page hidden" data-page="/markets">
+    <h2 class="page-title">Monitored markets</h2>
+    <p class="h2-sub">Every commitment this registry holds, read from chain.</p>
+    <div class="filters">
+      <button class="chip" data-f="all" aria-pressed="true">All Books</button>
+      <button class="chip" data-f="covered">Covered Now</button>
+      <button class="chip" data-f="breached">Breached</button>
+      <button class="chip" data-f="uncovered">Uncovered</button>
+      <input class="input" id="marketSearch" placeholder="Search Market ID" style="max-width:260px">
+    </div>
+    <div class="table-wrap"><div class="scroll"><table>
+      <thead><tr>
+        <th>Market</th><th>Maker</th><th>Max spread</th><th>Min depth</th><th>Bond</th>
+        <th>Latest verdict</th><th>Source</th><th>Window</th><th></th>
+      </tr></thead>
+      <tbody id="marketRows"><tr><td colspan="9"><div class="empty">reading the chain…</div></td></tr></tbody>
+    </table></div></div>
+    <div id="marketDetail"></div>
+  </section>
+
+  <!-- ═══ PAGE 3: COMMITMENT STUDIO ═══ -->
+  <section class="page hidden" data-page="/publish">
+    <div class="form-narrow">
+      <h2 class="page-title">Commitment studio</h2>
+      <p class="h2-sub">Configure, prefund and post a quoting commitment. The envelope is dry-run
+        against the live book before you sign.</p>
+      <div class="card" id="publishForm"></div>
     </div>
   </section>
 
-  <!-- ============ §3.4 MARKET REGISTRY DIRECTORY ============ -->
-  <section id="markets" class="hidden">
-    <h2>Market registry directory</h2>
-    <p class="section-note">Every commitment this registry holds, read from chain. One market is under
-      measurement — PRD §27 scopes this phase to one, and K10 cut multi-market.</p>
-    <div class="toolbar">
-      <input class="search" id="search" placeholder="Filter by Market ID, Symbol, or Maker address…">
-      <button class="pill" data-filter="all" aria-pressed="true">All</button>
-      <button class="pill" data-filter="COVERED_AT_SAMPLE">Covered at Sample</button>
-      <button class="pill" data-filter="breach">Active Breach</button>
-      <button class="pill" data-filter="uncovered">Uncovered</button>
-      <button class="pill" data-filter="baseline">Testnet Baseline</button>
+  <!-- ═══ PAGE 4A: BREACH AUDIT TERMINAL ═══ -->
+  <section class="page hidden" data-page="/breaches">
+    <h2 class="page-title">Breach audit terminal</h2>
+    <p class="h2-sub">Historical incident log. Every breach names the sample that caused it.</p>
+    <div class="filters">
+      <input class="input" id="breachSearch" placeholder="Filter by Market ID or Maker address" style="max-width:340px">
     </div>
-    <div class="card wrap-x">
-      <div class="scroll"><table>
-        <thead><tr>
-          <th>Market</th><th>Maker</th><th>Committed envelope</th><th class="num">Posted bond</th>
-          <th>Last sample verdict</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="directoryBody"><tr><td colspan="6" class="spin-note">reading the chain…</td></tr></tbody>
-      </table></div>
+    <div class="table-wrap"><div class="scroll"><table>
+      <thead><tr><th>Breach</th><th>Market</th><th>Type</th><th>Offending block</th><th>Forfeited</th><th>Claim status</th><th></th></tr></thead>
+      <tbody id="breachRows"><tr><td colspan="7"><div class="empty">reading the chain…</div></td></tr></tbody>
+    </table></div></div>
+    <div id="breachDossier"></div>
+  </section>
+
+  <!-- ═══ PAGE 5: TRADER SETTLEMENT PORTAL ═══ -->
+  <section class="page hidden" data-page="/claim">
+    <h2 class="page-title">Trader settlement portal</h2>
+    <p class="h2-sub">Payout distribution for traders present during breaches.</p>
+    <div id="claimBody"></div>
+  </section>
+
+  <!-- ═══ PAGE 6: VERIFICATION PLAYGROUND ═══ -->
+  <section class="page hidden" data-page="/verify">
+    <h2 class="page-title">Verification playground</h2>
+    <p class="h2-sub">Clean-room verification for judges, auditors and traders. Nothing here asks our
+      servers anything — there are none.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h2>Interactive in-browser verifier</h2>
+        <p class="h2-sub">Enter a sample id. This fetches the stored sample and its commitment from a
+          public RPC, re-derives the verdict with <code>packages/reference</code>, and compares it
+          against what the chain says.</p>
+        <label class="field" for="verifyInput">Sample ID</label>
+        <input class="input" id="verifyInput" value="0">
+        <button class="btn btn-white" id="verifyRun" style="margin-top:var(--s-3)">Re-Derive Verdict from Chain</button>
+        <div class="term" id="verifyLog" style="margin-top:var(--s-4)"><pre>awaiting input…</pre></div>
+      </div>
+      <div class="card">
+        <h2>CLI verification</h2>
+        <p class="h2-sub">The same check, from a clean clone, with no account and no API key.</p>
+        <div id="cliDocs"></div>
+      </div>
     </div>
-
-    <!-- §3.5 MARKET DETAIL & LIVE VERIFICATION STREAM -->
-    <div id="detail"></div>
-  </section>
-
-  <!-- ============ §3.7 BREACH EVIDENCE ============ -->
-  <section id="ledger" class="hidden">
-    <h2>Breach evidence</h2>
-    <p class="section-note">Every breach records the sample that caused it. Open one and check it
-      against the chain without taking our word for anything.</p>
-    <div id="breachBody" class="spin-note">reading the chain…</div>
-  </section>
-
-  <!-- ============ VERIFIER ============ -->
-  <section id="verify" class="hidden">
-    <h2>Verify a breach yourself</h2>
-    <p class="section-note">No account, no API key, and no access to anything of ours. A public RPC is
-      enough. These commands are generated from the deployment record this page loaded.</p>
-    <div id="verifyBody" class="spin-note">reading the chain…</div>
-  </section>
-
-  <!-- ============ DOCS ============ -->
-  <section id="docs" class="hidden">
-    <h2>What is measured, and what is not</h2>
-    <p class="section-note">Read this before quoting any number on this site.</p>
-    <div class="card" id="docsBody"></div>
   </section>
 </main>
 
-<footer>
-  <div class="status-bar">
-    <span id="statusLeft">Somnia Shannon: reading… · Reactivity precompile: reading… · Fallback keeper: idle</span>
-    <span>Commitment hash: pinned via skills-lock.json</span>
-  </div>
-  <div class="cols">
-    <div>
-      <h4>PROTOCOL</h4>
-      <p>Fixed public standard for quoting verification and penalty settlement.</p>
-      <p>Open-source · MIT License</p>
-    </div>
-    <div>
-      <h4>SURFACES</h4>
-      <a href="#" data-view="markets">Directory</a>
-      <a href="#" data-view="ledger">Breach Ledger</a>
-      <a href="#" id="footPublisher">Publisher Studio</a>
-      <a href="#" data-view="verify">Verifier CLI</a>
-    </div>
-    <div>
-      <h4>RESOURCES &amp; DOCUMENTATION</h4>
-      <a href="#" data-view="docs">Phase progress &amp; kill criteria</a>
-      <a href="https://docs.dreamdex.io/developers/event-contracts" target="_blank" rel="noopener">DreamDEX event contracts</a>
-      <a href="https://docs.somnia.network/developer/reactivity" target="_blank" rel="noopener">Somnia reactivity</a>
-      <a href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Somnia faucet</a>
-    </div>
-    <div>
-      <h4>HACKATHON VERIFICATION PROOFS</h4>
-      <a id="footRegistry" target="_blank" rel="noopener">Shannon registry address</a>
-      <a id="footSubscriber" target="_blank" rel="noopener">Subscriber contract</a>
-      <a href="#" data-view="verify">Seed claims ledger</a>
-    </div>
-  </div>
-  <div class="bottom">Assize is built for the Somnia × DreamDEX Hackathon. Testnet only. No real money or tokens.</div>
+<!-- ═══ §2 GLOBAL FOOTER BAR ═══ -->
+<footer class="bar">
+  <span>Assize Protocol · Somnia × DreamDEX Event Contracts Hackathon</span>
+  <span class="mid">Instants only. Non-continuous. Payouts reach witnessed volume only.</span>
+  <span><a id="footRepo" href="#">Repository</a> · <a id="footAddr" target="_blank" rel="noopener">Deployment</a> · <a href="#/verify">Docs</a></span>
 </footer>
-<div id="modalHost"></div>
+<div id="overlay"></div>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

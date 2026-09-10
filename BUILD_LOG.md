@@ -759,3 +759,42 @@ headless chromium, file:// origin        console errors: none
   horizontal overflow at 390/768/1440    none
 pnpm check:vocabulary / no-address-literals / paths   exit 0
 ```
+
+---
+
+## 2026-09-10 — Frontend rebuilt against the replacement frontend.md
+
+The design authority was replaced with a Midday.ai minimal dark monochromatic system: six routes, a
+new palette, pill-and-dot badges, a pinned 48px footer bar. The previous surface was discarded and
+rebuilt against it.
+
+**Built:** Overview with the centred hero, the four-box live telemetry bento, problem-versus-mechanism
+cards, the interactive five-step lifecycle, the breach proof teaser and the boundaries box · Markets
+directory with filter chips and the live coverage terminal, handler gas gauge and sample ledger with
+a slide-out inspect drawer · Commitment studio at 640px with the economic summary, tick validator and
+insufficient-funds state · Breach audit terminal with the incident log and proof dossier · Trader
+settlement portal · Verification playground with a working in-browser verifier.
+
+The in-browser verifier is the piece worth pointing at. It reads the stored sample and commitment from
+a public RPC, checks the block pin against the block's parent hash, re-derives the verdict with
+`packages/reference`, and prints PASS or FAIL against what the chain says. Verified live: it reads
+sample #0, confirms the pin matches, and both sides agree on `SPREAD_BREACH`.
+
+**Two gaps in the new document, neither invented around.** It defines five verdict colours for seven
+states — `WINDOW_CLOSED` has none and `SAMPLER_FAILED` is absent entirely (D-030, owner decision
+pending). And it specifies a settlement path K10 cut: `/claim`, `claim(breachId)`, "forfeited **and
+distributed**", "Transferred to claimant pool". Those surfaces are built and each says plainly that
+the mechanism is designed and not deployed (D-031).
+
+**And the predicted failure arrived while this was being built.** The subscription ran out of gas and
+was **removed**, not skipped, exactly as D-020 described. Sampling stopped at 29,541 samples. The
+gauge caught it immediately — zero projected callbacks, in red — which is the anti-dashboard claim
+working on the product's own infrastructure. Nothing on chain is affected; what stopped is new
+measurement. Restarting needs 32 STT in the subscriber and the faucet allows one claim a day (D-032).
+
+```
+forge test / typecheck / G2 / vocabulary / addresses / paths / claims   all exit 0
+headless chromium, file:// origin, six routes                           console errors: none
+horizontal overflow at 390 / 768 / 1440                                 none
+in-browser verifier against sample #0                                   PASS
+```

@@ -1,242 +1,257 @@
-# ==============================================================================
-# ASSIZE FRONTEND SPECIFICATION & DESIGN AUTHORITY (frontend.txt / frontend.md)
-# Repository: assize | Target: Somnia Shannon Testnet x DreamDEX Event Contracts
-# Status: Production Design Authority | Governs §0, §9, §18, §22 of PRD.md
-# ==============================================================================
+================================================================================
+ASSIZE FRONTEND SPECIFICATION & ARCHITECTURE AUTHORITY (frontend.txt)
+Lineage: Midday.ai Minimal Dark Monochromatic System
+Network: Somnia Shannon Testnet | Protocol Target: DreamDEX Event Contracts
+Governing Document: PRD.md
+================================================================================
 
-[DESIGN AUTHORITY DECLARATION]
-This document is the sole authority for design, layouts, component hierarchy,
-color systems, typography, micro-interactions, copy guardrails, and asset strategy
-for the Assize web application. Engineering agents must strictly implement the
-specifications herein without inventing ad-hoc UI patterns or styles.
+1. SYSTEM DESIGN TOKENS & ATOMIC STYLES
+--------------------------------------------------------------------------------
+Visual Identity:
+  - Exact clone of Midday.ai: ultra-dark monochrome canvas, hairline borders,
+    high-contrast white primary buttons, and monospace data readouts.
+  - Border treatments: 1px hairline rgba(255, 255, 255, 0.06) across all cards,
+    tables, and dividers.
+  - Interactive hover states: transition to rgba(255, 255, 255, 0.12) with zero
+    drop shadow or blur elevation.
+
+Color Palette:
+  --bg-canvas:              #08080a (Base application background)
+  --bg-surface:             #0f0f12 (Card containers and table rows)
+  --bg-surface-elevated:    #16161a (Drawers, modals, dropdown menus)
+  --bg-surface-hover:       #1a1a20 (Table row and interactive card hover)
+  
+  --border-subtle:          rgba(255, 255, 255, 0.06)
+  --border-strong:          rgba(255, 255, 255, 0.14)
+  --border-focus:           rgba(255, 255, 255, 0.35)
+
+  --text-primary:           #f4f4f5 (Headings, primary metrics, active navigation)
+  --text-secondary:         #a1a1aa (Secondary metrics, input placeholders, labels)
+  --text-muted:             #52525b (Explanatory footnotes, timestamps, disabled items)
+
+Semantic State Badges (PRD §5.2):
+  --verdict-covered:        #10b981 (COVERED_AT_SAMPLE - emerald pill + dot)
+  --verdict-spread-breach:  #f59e0b (SPREAD_BREACH - amber pill + dot)
+  --verdict-depth-breach:   #f97316 (DEPTH_BREACH - orange pill + dot)
+  --verdict-absent:         #ef4444 (ABSENT - rose pill + dot)
+  --verdict-not-sampled:    #71717a (NOT_SAMPLED - neutral zinc pill + dot)
+
+Source Attribution Badges (PRD §0.9):
+  --badge-reactivity:       bg-sky-500/10 text-sky-400 border-sky-500/20 [REACTIVITY]
+  --badge-keeper:           bg-amber-500/10 text-amber-400 border-amber-500/20 [KEEPER]
+
+Typography:
+  --font-sans:              Geist Sans, Inter, -apple-system, sans-serif
+  --font-mono:              Geist Mono, JetBrains Mono, monospace (for hashes,
+                            amounts, spreads, block numbers, CLI commands, states)
+
+Linter Rules & Prohibited Copy (PRD §5.2):
+  - Any copy, banner, tooltip, or label containing the following words must fail
+    build validation: "guaranteed", "safe", "liquid", "always", "protected", "insured".
 
 --------------------------------------------------------------------------------
-1. BRAND IDENTITY & DESIGN SYSTEM
+2. GLOBAL APP SHELL (NAVIGATION & FOOTER)
 --------------------------------------------------------------------------------
+Top Navigation Bar (Sticky, 56px height, backdrop-blur-md bg-canvas/80):
+  - Brand Block: "ASSIZE" (font-mono, font-bold, tracking-widest, text-sm)
+  - Navigation Tabs (Separated from brand by 1px vertical border):
+    * Overview  -> `/`
+    * Markets   -> `/markets`
+    * Publish   -> `/publish`
+    * Breaches  -> `/breaches`
+    * Claims    -> `/claim`
+    * Verifier  -> `/verify`
+  - Protocol Health Status:
+    * Live Pulsing Dot + "Somnia Shannon" (font-mono, text-xs, text-zinc-400)
+  - Actions (Right aligned):
+    * Link: "Faucet" (Points to Somnia Shannon testnet faucet / Telegram community)
+    * Button: "+ Post Commitment" (Primary white button -> routes to `/publish`)
+    * Wallet Pill: Displays STT balance + truncated address (0x71...8B2)
 
-1.1 Core Aesthetic
-- Style: Dark-mode precision financial terminal meets modern developer infrastructure.
-- Tone: Cold, deterministic, authoritative, zero-hyperbole, mathematically grounded.
-- Background: Deep obsidian (#08090C) with subtle radial ambient glow (#1E293B at 8% opacity).
-- Glassmorphism: Background blur (backdrop-blur-xl) with ultra-subtle translucent borders.
-
-1.2 Color Tokens
-- Background Base:        #08090C (Canvas / Root)
-- Surface Elevated:       #0D0F15 (Cards, modals, popovers)
-- Surface High:           #141721 (Hover states, table rows, input fields)
-- Border Subtle:          rgba(255, 255, 255, 0.07) (Standard card & divider borders)
-- Border Active:          rgba(255, 255, 255, 0.18) (Focus rings, selected tabs)
-- Text Primary:           #F8FAFC (Headings, primary figures, active tabs)
-- Text Secondary:         #94A3B8 (Subheadings, parameter labels, timestamps)
-- Text Tertiary:          #64748B (Helper text, table column headers, block hashes)
-
-1.3 Verdict & State Badge Palette (Strictly Enumerated per §5.2)
-- COVERED_AT_SAMPLE:      Text #34D399 | Bg rgba(52, 211, 153, 0.08) | Border rgba(52, 211, 153, 0.25)
-- SPREAD_BREACH:          Text #F87171 | Bg rgba(248, 113, 113, 0.08) | Border rgba(248, 113, 113, 0.25)
-- DEPTH_BREACH:           Text #FB923C | Bg rgba(251, 146, 60, 0.08)  | Border rgba(251, 146, 60, 0.25)
-- ABSENT:                 Text #E879F9 | Bg rgba(232, 121, 249, 0.08) | Border rgba(232, 121, 249, 0.25)
-- NOT_SAMPLED:            Text #94A3B8 | Bg rgba(148, 163, 184, 0.08) | Border rgba(148, 163, 184, 0.25)
-- WINDOW_CLOSED:          Text #64748B | Bg rgba(100, 116, 139, 0.08) | Border rgba(100, 116, 139, 0.20)
-- SAMPLER_FAILED:         Text #F43F5E | Bg rgba(244, 63, 94, 0.12)  | Border rgba(244, 63, 94, 0.35)
-
-1.4 Provenance & Baseline Tags
-- REACTIVITY Source:      Text #38BDF8 | Bg rgba(56, 189, 248, 0.08)  | Border rgba(56, 189, 248, 0.25)
-- KEEPER Source:          Text #FBBF24 | Bg rgba(251, 191, 36, 0.08)  | Border rgba(251, 191, 36, 0.25)
-- PROJECT_BASELINE:       Text #A855F7 | Bg rgba(168, 85, 247, 0.08)  | Border rgba(168, 85, 247, 0.25)
-
-1.5 Typography
-- Display / Headings:     Geist Sans, SF Pro Display, or Inter. Font weights: 600, 700.
-                          Letter-spacing: -0.03em.
-- Body / Microcopy:       Geist Sans or Inter. Font weights: 400, 500.
-                          Letter-spacing: -0.01em.
-- Code / Metrics / Pins:  Geist Mono or JetBrains Mono. Font weights: 400, 500.
-                          Letter-spacing: 0.00em. Tabular numbers enabled (tabular-nums).
-
-1.6 Vocabulary & Copy Enforcement Filter (§5.2 & §22 G8)
-- FORBIDDEN WORDS:        "guaranteed", "safe", "liquid", "always", "protected", "insured"
-- Any occurrence of these words in copy, badges, toasts, or error text will fail CI.
-- Required Disclaimers:
-  * "Assize measures quoting behavior at sampled instants, not continuously."
-  * "Unsampled intervals are recorded as NOT_SAMPLED and never counted as coverage."
-  * "Forfeited bonds are claimable pro rata exclusively by witnessed traders in that window."
+Global Footer Bar (Sticky/Pinned bottom, 48px height, border-t border-subtle):
+  - Left: "Assize Protocol · Somnia × DreamDEX Event Contracts Hackathon"
+  - Center: "Instants only. Non-continuous. Payouts reach witnessed volume only."
+  - Right: GitHub repository link · Contract deployment addresses · Docs
 
 --------------------------------------------------------------------------------
-2. APPLICATION NAVIGATION & TOP BAR
+3. PAGE SPECIFICATIONS
 --------------------------------------------------------------------------------
 
-2.1 Sticky Top Navigation (Fixed, backdrop-blur-md, 56px height, border-b border-white/[0.06])
-- Left:
-  * Logo Icon: Minimal geometric anvil/bracket glyph (SVG inline).
-  * Wordmark: "ASSIZE" in Geist Mono, 15px, font-bold, tracking-wider, text-white.
-  * Environment Pill: "SHANNON TESTNET" (Text #38BDF8, bg-cyan-950/40, border border-cyan-800/40).
-- Center (Tabs):
-  * [Live Markets] (Active indicator: 1px bottom accent line in #38BDF8 or white).
-  * [Breach Ledger]
-  * [Bond Claim Portal]
-  * [Verifier CLI]
-  * [Documentation & Phase]
-- Right:
-  * Handler Gas Status Pill: "Reactive precompile funded: 42.1 STT" (Dot: pulsing green).
-  * Testnet Faucet Link (Redirects to Somnia Telegram community with tooltip).
-  * Wallet Connection: [Connect Wallet] button (High contrast, #FFFFFF text #000000, rounded-lg).
+PAGE 1: LANDING PAGE & OVERVIEW (`/`)
+--------------------------------------
+Purpose: Comprehensive overview of the protocol, explaining problem, mechanism,
+proof mechanics, and live platform telemetry.
+
+Section 1: Hero Section (Midday Minimalist Centered Grid)
+  - Badge: "Built for Somnia Shannon × DreamDEX Event Contracts"
+  - Headline: "Liquidity is a promise. Assize enforces the bond."
+  - Subtext: "Turn unverified prediction market liquidity into an on-chain,
+    sampled commitment. When a market maker's spread widens or depth pulls, the
+    bond forfeits directly to witnessed traders."
+  - Primary CTAs:
+    * [Explore Monitored Markets] (White button -> `/markets`)
+    * [Post a Commitment] (Outlined zinc button -> `/publish`)
+    * [Verify a Breach] (Ghost button -> `/verify`)
+
+Section 2: Live Protocol Telemetry Bento (4-Column Midday Bento Layout)
+  - Box 1: Total Value Bonded (Live STT locked across all active commitments)
+  - Box 2: Monitored Order Books (Count of active DreamDEX event contract markets)
+  - Box 3: Total Samples Evaluated (Breakdown: XX% Reactivity, YY% Keeper)
+  - Box 4: Total Breaches Executed (Total STT forfeited and distributed)
+
+Section 3: The Problem vs. The Mechanism (Side-by-Side Bento Cards)
+  - Card A ("The Residual Price Fallacy"):
+    Explains how prediction markets display stale last-traded prices on empty
+    books. Traders size up, find no counterparty, and leave with zero record.
+  - Card B ("Reactivity-Driven Enforcement"):
+    Details how Somnia's reactivity precompile invokes Assize validators on
+    market events, evaluates the book deterministically, and executes on-chain
+    forfeitures.
+
+Section 4: The 5-Step Deterministic Protocol Lifecycle (Interactive Flow)
+  - Step 1: Maker posts an envelope (Max Spread, Min Depth, Window, Bond).
+  - Step 2: Somnia reactivity precompile detects live book changes.
+  - Step 3: Registry executes deterministic verdict = f(commitment, sample).
+  - Step 4: Breach triggers immediate forfeiture of the maker's bond.
+  - Step 5: Witnessed traders claim forfeited capital pro-rata.
+
+Section 5: Live Breach Proof Teaser
+  - Monospace mini-terminal showing the latest recorded breach.
+  - Offending block hash, sample spread vs. envelope, and one-click copyable
+    CLI verification command: `assize verify <breachId>`.
+
+Section 6: Hard Protocol Boundaries & Disclosures (Auditor Transparency Box)
+  - Explicit statement: "Assize does not guarantee continuous liquidity.
+    Evaluations occur at sampled instants. Payouts reach witnessed traders only."
+
+
+PAGE 2: MARKETS DIRECTORY & DETAILS (`/markets` & `/markets/[id]`)
+------------------------------------------------------------------
+Route 2A: `/markets` (Directory View)
+  - Filter Bar: [All Books] [Covered Now] [Breached] [Uncovered] [Search Market ID]
+  - Market List Grid / Table:
+    * Columns: Market Name/Question, Maker Address, Committed Max Spread,
+      Committed Min Depth, Bond Amount, Latest Sample Verdict, Source Badge,
+      Window Countdown, Details Action.
+    * Verdict Badges: COVERED_AT_SAMPLE, SPREAD_BREACH, DEPTH_BREACH, ABSENT,
+      NOT_SAMPLED, WINDOW_CLOSED.
+    * Empty State: "No active quoting commitments found on current DreamDEX books."
+
+Route 2B: `/markets/[id]` (Live Market Coverage Terminal)
+  - Header: Full market title, DreamDEX contract ID, and live price ticker.
+  - Envelope Status Card:
+    * Maker address, Active Bond (STT), Max Spread (bps), Min Size (contracts).
+    * Handler Gas Gauge: Visual meter showing prefunded gas remaining + projected
+      samples left before exhaustion.
+  - Live Sample Inspection Ledger:
+    * Real-time stream of order book samples.
+    * Columns: Sample ID, Timestamp, Block #, Block Hash, Observed Bid/Ask,
+      Observed Spread, Observed Size, Source ([REACTIVITY] or [KEEPER]), Verdict.
+    * Clicking any row opens a slide-out inspect drawer displaying raw JSON
+      struct matching `packages/protocol-types`.
+  - Mandatory "NOT_SAMPLED" Note:
+    * If a gap occurs in the ledger, render a full-width subtle banner:
+      "Sampling occurs at discrete instants. An unrecorded block tick is logged
+      as NOT_SAMPLED rather than smoothed over."
+
+
+PAGE 3: COMMITMENT STUDIO (`/publish`)
+--------------------------------------
+Purpose: Maker interface to configure, prefund, and post a quoting commitment.
+
+Form Layout (Centered, 640px Max Width Form Container):
+  - Field 1: Market Selector (Live drop-down queried via DreamDEX SDK probe).
+  - Field 2: Maximum Allowable Spread (Basis points input with real-time tick validator).
+  - Field 3: Minimum Book Depth (Contract units required on both bid and ask).
+  - Field 4: Commitment Window Duration (Preset blocks or slider: 1h, 4h, 12h, 24h).
+  - Field 5: Bond Collateral (STT amount deposited into escrow).
+  - Field 6: Handler Gas Prefund (Dynamic calculator estimating required gas
+    for Somnia precompile invocations based on market frequency).
+  - Economic Summary Card:
+    * Collateral Escrow: X.XX STT
+    * Handler Prefund: Y.YY STT
+    * Total Required: (X.XX + Y.YY) STT
+  - Validation & Edge States:
+    * If Wallet STT < Total Required: Button switches to disabled state reading
+      "Insufficient STT Balance". Render banner with direct links:
+      [Open Shannon Faucet] and [Join Somnia Telegram Community].
+    * If Spread < Market Minimum Tick: Inline alert: "Spread cannot be tighter
+      than DreamDEX minimum tick size."
+
+
+PAGE 4: BREACH AUDIT TERMINAL (`/breaches` & `/breaches/[id]`)
+--------------------------------------------------------------
+Route 4A: `/breaches` (Historical Incident Log)
+  - Search / Filter by Market ID or Maker Address.
+  - Table of historical violations: Breach ID, Market, Breach Type (Spread,
+    Depth, Absent), Offending Sample Block, Forfeited Bond, Claim Status.
+
+Route 4B: `/breaches/[id]` (Single Breach Proof Dossier)
+  - Audit Receipt View (Monospace Midday style receipt card):
+    * Breach Incident ID: #BR-00948
+    * Contract Address: `0x...`
+    * Violated Parameter: "Observed spread 145 bps exceeded committed max 80 bps."
+    * Offending Sample Block: #2,910,481 (Block Hash: `0x4e8a...110b`)
+    * Sample Source: `[REACTIVITY]` (Precompile Callback Tx: `0x91c...`)
+    * Forfeited Collateral: 500 STT (Transferred to claimant pool)
+  - Clean-Room Reproduction Block:
+    * Terminal container with one-click copy button:
+      `npx assize verify [breachId] --rpc https://dream-rpc.somnia.network`
+    * Explanatory caption: "Any stranger can run this command to re-read the
+      chain at the pinned block and re-derive the identical verdict."
+
+
+PAGE 5: TRADER SETTLEMENT PORTAL (`/claim`)
+-------------------------------------------
+Purpose: Payout distribution interface for traders present during breaches.
+
+Connected Wallet Audit Section:
+  - Connected Address: `0x...`
+  - Witnessed Orders & Fills during breached windows:
+    * Market ID / Question
+    * Fill Volume Attributed: X.XX STT
+    * Calculated Share Percentage: Y.YY%
+  - Claim Eligibility Statuses:
+    * State 1: `[ELIGIBLE]` -> Shows exact claimable STT.
+      Action: [Claim Payout] primary white button (calls `claim(breachId)`).
+    * State 2: `[NOT_WITNESSED]` -> Explains: "This wallet did not execute
+      trades witnessed by the registry during this breached window."
+    * State 3: `[ALREADY_CLAIMED]` -> Shows historical payout transaction hash.
+  - Anti-Wash Trading Disclosure:
+    * "Payouts strictly enforce self-match rejection and per-address distribution caps."
+
+
+PAGE 6: VERIFICATION PLAYGROUND & CLI DOCS (`/verify`)
+------------------------------------------------------
+Purpose: Interactive clean-room verification for judges, auditors, and traders.
+
+Interface Components:
+  - Interactive In-Browser Verifier:
+    * Input: Breach ID or Sample ID
+    * Button: [Re-Derive Verdict from Chain]
+    * Real-Time Log Output: Fetches block pin from public RPC, extracts order book
+      ticks, runs differential evaluator, prints PASS/FAIL verdict match.
+  - CLI Installation Guide:
+    * Code Snippet: `npm install -g @assize/sdk`
+    * Verification command reference with optional RPC flag.
+    * Link to `packages/verifier` on GitHub.
 
 --------------------------------------------------------------------------------
-3. LANDING PAGE & CORE SURFACES ARCHITECTURE
+4. GLOBAL EDGE STATES, EMPTY STATES & TOOLTIPS
 --------------------------------------------------------------------------------
+Insufficient Funds State (Every form):
+  - Renders amber/zinc notice: "Insufficient STT. Testnet tokens must be obtained
+    from the Somnia Shannon Faucet or the official Discord/Telegram."
 
-3.1 Hero Section
-- Badge Anchor:
-  * "SOMNIA REACTIVITY PRECOMPILE x DREAMDEX EVENT CONTRACTS"
-  * Pill with subtle rotating gradient border (zinc-700 to cyan-500).
-- Headline:
-  * "Liquidity is a quoting commitment backed by an on-chain bond."
-  * Size: 56px (desktop), 36px (mobile). Font-weight: 700. Tracking: -0.035em.
-- Subheadline:
-  * "DreamDEX order books are sampled at discrete instants using Somnia validator-driven
-     callbacks. When a maker breaches committed spread or depth, the bond forfeits
-     pro rata to traders witnessed in that window."
-  * Size: 17px. Color: #94A3B8. Max width: 680px.
-- CTAs:
-  * Primary: [Inspect Live Markets] (Solid White, Black text, hover:bg-zinc-200).
-  * Secondary: [Publish Maker Commitment] (Translucent slate, 1px border, hover:bg-white/5).
-  * Tertiary: [Verify a Breach via CLI] (Ghost button with terminal icon).
+Network Mismatch State:
+  - If wallet is not on Somnia Shannon Testnet: Global modal blocks actions:
+    "Please switch network to Somnia Shannon (Chain ID: 50312)."
 
-3.2 Hero Live Simulator Card (Interactive Terminal Component)
-- Real-time book sampling visualizer positioned directly beside/below the hero text.
-- Header: "LATEST ON-CHAIN SAMPLE · BLOCK #12,849,204" with source badge `source: REACTIVITY`.
-- Live Data Ticker:
-  * Bid: 0.4920 (Size: 1,500) | Ask: 0.5080 (Size: 1,200) | Spread: 160 bps (Committed: <= 200 bps)
-- Interactive Toggle:
-  * Slider to widen spread or simulate dropped quote.
-  * Instant readout: "Pure Verdict Evaluator: f(commitment, sample) -> SPREAD_BREACH"
-  * Visual payout flash: "Bond: 500 STT forfeited to 4 witnessed addresses."
+NOT_SAMPLED State Footnote:
+  - Always attached whenever `NOT_SAMPLED` appears:
+    "Assize samples at discrete instants. An unrecorded block tick is logged
+    transparently as NOT_SAMPLED rather than smoothed over."
 
-3.3 Bento Grid: Protocol Guarantees & Operational Pillars
-- Box 1: "Instant Reactive Sampling (Path R)"
-  * Explains Somnia precompile triggering on contract events.
-  * Visual: Animated event emitter wireframe connecting DreamDEX to AssizeRegistry.
-- Box 2: "Zero-Trust Stranger Verification"
-  * Explains deterministic evaluation. Any third party can re-derive the verdict from public RPC.
-  * Visual: Copyable terminal command `npx @assize/sdk verify 0x8a3f...`.
-- Box 3: "Witnessed Volume Settle"
-  * Explains pro-rata bond distribution to genuine traders, self-match rejection, counterparty caps.
-  * Visual: Interactive split calculation card.
-- Box 4: "Unfiltered Integrity (The Anti-Dashboard)"
-  * Emphasizes that NOT_SAMPLED intervals and breaches are never smoothed over or hidden.
-
-3.4 Surface 1: Market Registry Directory (§9)
-- Search & Filter Toolbar:
-  * Input field: "Filter by Market ID, Symbol, or Maker address..."
-  * Filter pills: [All] · [Covered at Sample] · [Active Breach] · [Uncovered] · [Testnet Baseline]
-- Data Table Columns:
-  1. Market (ID, Event Contract Symbol, Underlying question).
-  2. Maker Address (Truncated 0x... with copy icon, baseline flagged with `PROJECT_BASELINE`).
-  3. Committed Envelope (Max Spread in bps, Min Size in contracts, Expiry window).
-  4. Posted Bond (STT amount locked in contract).
-  5. Last Sample Verdict (Enumerated badge, timestamp, source badge).
-  6. Actions ([Inspect Stream] / [View Breach]).
-- Empty State: "No active quoting commitments found for this filter. Run baseline maker to seed."
-
-3.5 Surface 2: Market Detail & Live Verification Stream (§9)
-- Header:
-  * Market title, active commitment parameters, time remaining in window.
-  * Handler Gas Gauge: Visual meter showing prefunded execution balance for callbacks.
-- Order Book Depth & Instant Sample Snapshot:
-  * Visual depth chart showing committed spread boundary vs. current sampled bid/ask.
-- Live Sample Stream (Virtual scroll table):
-  * Columns: Time | Block Number | Block Hash (pinned) | Bid/Ask | Size | Verdict Badge | Source
-  * Clicking any row opens the Stored Sample Inspector showing raw JSON struct from chain.
-- NOT_SAMPLED Handling:
-  * Rendered as an amber-gray row with an inline explainer:
-    "Sampling gap at block #12849182. Precompile did not emit or RPC delayed. Not counted as coverage."
-
-3.6 Surface 3: Maker Commitment Publisher Modal (§9, §12)
-- Step 1: Envelope Definition
-  * Market ID select (dynamically probed from DreamDEX SDK, no hardcoded strings).
-  * Maximum Allowable Spread (bps or tick units).
-  * Minimum Liquidity Depth (contracts).
-  * Window Duration (Start timestamp to End timestamp).
-- Step 2: Capital Staking & Gas Prefund
-  * Bond Deposit (STT input field).
-  * Reactive Handler Gas Prefund (Calculated based on estimated blocks in window).
-- Low STT Warning State:
-  * If wallet STT < (Bond + Gas Prefund):
-    Display alert: "Insufficient STT balance. Request testnet funds from the Somnia Telegram faucet."
-    Button: [Open Faucet Community]
-- Step 3: Envelope Sanity Review
-  * Client-side reference evaluator (`packages/reference`) dry-runs the envelope before signing.
-  * Button: [Sign & Publish Commitment].
-
-3.7 Surface 4: Breach Evidence & Stranger Verification Page (§9, §11)
-- Prominent Alert Header:
-  * "BREACH RECORDED: SPREAD_BREACH at Block #12,850,119"
-- Evidence Card:
-  * Stored Sample Record: Bid: 0.4700, Ask: 0.5350 (Spread: 650 bps vs Max 200 bps).
-  * Pin Verification: Block Hash `0x4f8e91...` confirmed canonical on Shannon testnet.
-  * Forfeited Bond Status: "500 STT unlocked for distribution."
-- Stranger Verification Box (High contrast dark terminal):
-  * "Verify this verdict independently without our servers:"
-  * Terminal block with one-click copy:
-    `assize verify --breach 0x9c3e2... --rpc https://dream-rpc.shannon.somnia.network`
-  * Link to raw transaction on Somnia Shannon Block Explorer.
-
-3.8 Surface 5: Trader Bond Claim Portal (§5.3, §9)
-- Trader Eligibility Checker:
-  * Input or auto-detected connected wallet address.
-  * Status readouts:
-    * ELIGIBLE: "You traded 1,200 contracts during the breach window. Claimable: 45.2 STT."
-    * NOT WITNESSED: "This address was not witnessed executing orders in the registered window."
-    * ALREADY CLAIMED: "Bond share of 45.2 STT claimed in tx 0x7b1..."
-  * Action: [Claim Forfeited Bond Share] (Calls `claim(breachId)` on `AssizeRegistry.sol`).
-
---------------------------------------------------------------------------------
-4. GLOBAL FOOTER SPECIFICATION
---------------------------------------------------------------------------------
-
-4.1 Structure (4-Column Layout + Operational Status Bar)
-- Status Bar (Top of footer):
-  * Left: "Somnia Shannon: Operational · Reactivity Precompile: Active · Fallback Keeper: Idle"
-  * Right: "Commitment Hash: Pinned via skills-lock.json"
-- Column 1 (Protocol):
-  * Description: Fixed standard quoting verification and penalty settlement.
-  * Open-source MIT License badge.
-- Column 2 (Surfaces):
-  * Directory, Breach Ledger, Publisher Studio, Witnessed Claims, Verifier CLI.
-- Column 3 (Resources & Documentation):
-  * Phase Progress (docs/phase.md), Kill Criteria, Runbooks, SDK Docs, Somnia Faucet.
-- Column 4 (Hackathon Verification Proofs):
-  * Shannon Registry Address (dynamic link), Subscriber Contract, Seed Claims Ledger.
-- Bottom Bar:
-  * "Assize is built for the Somnia x DreamDEX Hackathon. Testnet only. No real money or tokens."
-
---------------------------------------------------------------------------------
-5. ASSET STRATEGY & SOURCING GUIDE
---------------------------------------------------------------------------------
-
-5.1 UI Icons
-- Source: Lucide Icons or Phosphor Icons.
-- Key Icons:
-  * ShieldAlert (Breaches), Activity (Reactivity sampling), Terminal (CLI verification),
-  * Scale (Bond settlement), Cpu (Precompile hook), ExternalLink, Copy, CheckCircle.
-
-5.2 Background Imagery & Visual Textures
-- Style: Ultra-minimal dark tech, obsidian glass textures, subtle wireframe grids.
-- Sourcing Keywords for Unsplash / Pexels / Pinterest / Midjourney:
-  * "Dark obsidian glass texture minimalist 8k"
-  * "Abstract glowing wireframe grid dark slate UI"
-  * "Monochrome geometric server telemetry dark aesthetic"
-  * "Dark techno typography clean layout web3"
-- Tone Guardrail: Never use neon cartoon crypto illustrations, 3D coins, rocket ships,
-  or flashy marketing tropes. Keep it looking like high-consequence laboratory telemetry.
-
---------------------------------------------------------------------------------
-6. ACCEPTANCE & VERIFICATION CHECKLIST FOR FRONTEND AGENTS
---------------------------------------------------------------------------------
-- [ ] No hardcoded contract addresses or market IDs anywhere in source code (§17).
-- [ ] Automated regex checks confirm zero forbidden words in all strings (§5.2, §22 G8).
-- [ ] NOT_SAMPLED states are visibly rendered with plain-language explanations (§9).
-- [ ] All 7 enumerated verdict states have distinct, dedicated visual badges (§5.2).
-- [ ] Low STT balance states gracefully surface the Telegram faucet link (§9).
-- [ ] Stranger verification terminal command is copyable directly from breach pages (§11).
-- [ ] Fully responsive on 390px (mobile), 768px (tablet), and 1440px+ (desktop).
+Disconnected State:
+  - Forms disable submission buttons and show: [Connect Wallet to Proceed].
 ================================================================================

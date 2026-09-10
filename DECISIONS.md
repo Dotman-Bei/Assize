@@ -848,3 +848,88 @@ find-and-replace rather than a rewrite.
 first build hand-drew an SVG glyph instead, which is a visual decision invented where one was
 specified. They are now extracted verbatim from the `lucide-static` package at build time. When the
 document names a source, use that source.
+
+---
+
+## D-030: The new frontend.md defines five verdict colours; the enumeration has seven
+
+**Date:** 2026-09-10, Phase P4
+**Status:** **open. `OWNER DECISION` — the design authority is not ours to extend.**
+
+**Evidence.** The replacement `frontend.md` §1 defines semantic badge colours for
+`COVERED_AT_SAMPLE`, `SPREAD_BREACH`, `DEPTH_BREACH`, `ABSENT` and `NOT_SAMPLED`. PRD §5.2 enumerates
+seven states. `WINDOW_CLOSED` appears once in the document, in Page 2A's badge list, with no colour.
+`SAMPLER_FAILED` does not appear at all.
+
+AGENTS.md is explicit: "Do not add a state. Do not collapse two states into one because the UI is
+easier that way." Both of those are exactly what a missing colour tempts.
+
+**What was done, pending a decision.** Neither state got a new hex value — inventing one is the thing
+this repository forbids. Both render using tokens the document already defines: `--text-muted` on a
+muted ground. They are told apart from each other by border treatment, `WINDOW_CLOSED` taking
+`--border-subtle` and `SAMPLER_FAILED` a dashed `--border-focus`.
+
+**Why this is not good enough.** Two of the seven states now look more like each other than any other
+pair does, and `SAMPLER_FAILED` — which means our own measurement is unusable — reads as quietly as
+`WINDOW_CLOSED`, which is unremarkable. If a sampler ever does fail, the UI will underplay it.
+
+**What is needed.** Two hex values from the design authority, or permission to derive them.
+
+---
+
+## D-031: The new frontend.md describes payouts that this deployment cannot make
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, with the conflict surfaced rather than resolved silently
+
+**Evidence.** The replacement `frontend.md` specifies a full settlement path: a `/claim` portal with
+`[Claim Payout]` calling `claim(breachId)`, telemetry reading "Total STT forfeited **and
+distributed**", a breach dossier line reading "Forfeited Collateral: 500 STT (Transferred to claimant
+pool)", and hero copy saying the bond "forfeits directly to witnessed traders".
+
+None of it exists on chain. K10 cut payouts and the claim flow when the submission window got short
+(D-021), and `AssizeRegistry` has no settlement function at all.
+
+**Decision.** The surfaces are built, because the document specifies them and a missing page is a
+worse answer than an honest one. Every one of them states plainly that the mechanism is designed and
+not deployed: the telemetry box reads "1 STT forfeited · 0 STT distributed"; the breach dossier says
+"Forfeited, not transferred. There is no claimant pool"; the lifecycle's fifth step is labelled "Not
+deployed"; and `/claim` opens by saying it cannot pay anyone.
+
+Where the document's copy would assert something untrue, the copy is not used. The hero subtext is
+kept verbatim because it describes the mechanism rather than this deployment, and the boundaries
+section immediately below it corrects the impression.
+
+**Cost.** The site says "not deployed" in five places, which is repetitive and slightly deflating —
+and correct. PRD §0.8 forbids claiming functionality that has not been executed, and no amount of
+design authority overrides that.
+
+---
+
+## D-032: The subscription ran out of gas and was removed. The predicted failure happened.
+
+**Date:** 2026-09-10, Phase P2 evidence
+**Status:** recorded
+
+**Evidence.** `somnia_reactivityGetSubscriptions` now returns an empty list for the subscriber, whose
+balance is 0.0033 STT against a per-firing floor of 0.036 STT. Sampling stopped at **29,541 samples**.
+
+This is precisely what D-020 described from the pinned reference: the owner's balance is tested
+against the whole `gasLimit` at every firing, and falling below it **removes** the subscription rather
+than skipping an invocation. It was written down as the worst failure this product can have, and then
+it happened.
+
+**What it cost, and what it did not.** Nothing recorded on chain is affected: 29,541 samples, the
+recorded breaches, the forfeited bond and the callback transaction are permanent, and G3 and G4 stand
+on them. What stopped is new measurement.
+
+**Why this is, in a narrow sense, good evidence.** The interface surfaced it correctly and
+immediately: the handler gas gauge reads zero projected callbacks in red, and says the subscription is
+removed rather than skipped. The failure mode PRD §8.2 calls silent was not silent here, because the
+gauge was built to say so. That is the anti-dashboard claim doing its job on the product's own
+infrastructure.
+
+**Restarting it is blocked.** `SUBSCRIPTION_OWNER_MINIMUM_BALANCE` is 32 STT and is checked at
+creation, so re-subscribing needs the subscriber funded above 32 STT. The deployer holds 6.36 STT and
+the faucet allows one claim per 24 hours. Sampling cannot resume until the next claim. PRD §26 K8
+governs: publish exactly what the funding bought, and never present a shortened window as a full one.
