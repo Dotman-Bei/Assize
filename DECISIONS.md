@@ -1268,3 +1268,68 @@ measurement was available is the same defect as a claim above its rung.
 **The rule this earns.** A number that can be divided out of a completed run is measured, not
 estimated. `0.001286` came from arithmetic on two balances and a counter, all readable from chain by
 anyone; the estimate came from multiplying two constants together.
+
+---
+
+## D-044: A subscription the chain removes cannot be cleared, and that wedges the contract
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, fixing a live failure
+
+**Evidence.** 50 STT landed on the deployed subscriber
+(`0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0`, balance `50.003261984200000000`). Re-subscribing to
+resume sampling failed, and so did every route out of it:
+
+```
+cast call $SUB "subscribe(bytes32[4],(uint64,uint64,uint64))(uint256)" ...
+  -> execution reverted: AlreadySubscribed   (0x5fd8a132)
+cast call $SUB "unsubscribe()"
+  -> execution reverted: UnsubscribeFailed   (0x13e7ce5d)
+```
+
+D-032 records what put it there: the prefund ran out, the network removed the subscription itself,
+and `somnia_reactivityGetSubscriptions` returned an empty list. The contract was never told.
+`subscriptionId` still held `17611580`.
+
+**The mechanism.** `subscribe` is one-shot on `subscriptionId != 0`. The only function that clears it
+was:
+
+```solidity
+subscriptionId = 0;
+SomniaExtensions.unsubscribe(current);   // reverts UnsubscribeFailed
+```
+
+The precompile rejects an id it no longer knows, and `SomniaExtensions.unsubscribe` turns that
+rejection into a revert. The reset sits in the same transaction, so the revert rolls it back. The
+contract cannot subscribe, cannot unsubscribe, and cannot be repaired — a funded deployment with no
+reachable state where it samples again. Only `sweep` still worked, which is the sole reason the
+50 STT was not lost with it.
+
+**What was actually wrong.** Not the low-level call, which upstream already does. The error was
+treating a refusal as failure. Being asked to stop something the chain has already stopped is the
+goal reached by another route, and the contract's own state should not depend on the counterparty
+agreeing to a removal it performed unilaterally. State that only a third party can unlock is state
+that a third party can lock.
+
+**The fix.** `unsubscribe` calls the precompile low-level and clears `subscriptionId` regardless,
+emitting `SubscriptionCleared(id, acknowledged)`. The outcome is not swallowed — a removal the chain
+declined is on the log, distinguishable from one it performed. `contracts/test/CoverageSubscriber.t.sol`
+gains `test_unsubscribe_clears_the_id_even_when_the_chain_refuses`, which mocks the precompile into
+rejecting the id and asserts the contract subscribes again afterwards. **Verified to fail:**
+reinstating revert-on-refusal fails that test and nothing else.
+
+**Two holes found next to it.** `unsubscribe` had no access control at all, so any address could stop
+sampling for a bonded window for the price of one transaction — PRD §12's griefing row, reachable for
+free. `subscribe` had none either, and its caller chooses `gasLimit` and `maxFeePerGas` for callbacks
+paid out of this contract's prefund. Both are now `funder`-gated, with a test each.
+
+**Why it went unnoticed.** `unsubscribe` had no test of any kind. It was the one function on the
+contract that nothing exercised, and it is the one that wedged the deployment. The suite covered
+every path that ran in the happy case and none of the path that had to work when the happy case
+ended.
+
+**Cost.** A redeploy of the subscriber, and — because `AssizeRegistry.subscriber` is immutable — of
+the registry with it. The registry's `keeper` slot would have accepted a new subscriber without
+redeploying, and was rejected: keeper samples are labelled `KEEPER` by design, the owner may rotate
+the keeper at will, and routing the reactivity path through it would put an admin lever over sampling
+that `subscriber` being immutable exists to deny. Cheaper is not the same as true.

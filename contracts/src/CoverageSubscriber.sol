@@ -5,6 +5,8 @@ import {SomniaEventHandler} from
     "@somnia-chain/reactivity-contracts/contracts/SomniaEventHandler.sol";
 import {SomniaExtensions} from
     "@somnia-chain/reactivity-contracts/contracts/interfaces/SomniaExtensions.sol";
+import {ISomniaReactivityPrecompile} from
+    "@somnia-chain/reactivity-contracts/contracts/interfaces/ISomniaReactivityPrecompile.sol";
 
 import {AssizeRegistry} from "./AssizeRegistry.sol";
 import {IBinaryPool, OrderBookLevel} from "./interfaces/IBinaryPool.sol";
@@ -59,6 +61,10 @@ contract CoverageSubscriber is SomniaEventHandler {
     event SampleForwarded(uint256 indexed sampleId, uint64 blockNumber);
     event SampleSkipped(string reason);
     event Swept(address indexed to, uint256 amount);
+    /// @notice Emitted when the stored subscription id is cleared.
+    /// @param acknowledged Whether the precompile agreed to remove it. False
+    /// means the chain had already removed it, which is still a successful stop.
+    event SubscriptionCleared(uint256 indexed subscriptionId, bool acknowledged);
 
     error ZeroAddress();
     error AlreadySubscribed();
@@ -123,6 +129,10 @@ contract CoverageSubscriber is SomniaEventHandler {
         bytes32[4] calldata eventTopics,
         SomniaExtensions.SubscriptionOptions calldata options
     ) external returns (uint256) {
+        // The caller chooses `options.gasLimit` and `options.maxFeePerGas`, and
+        // every callback is paid out of this contract's prefund. An unrestricted
+        // subscribe let a stranger set both and drain it.
+        if (msg.sender != funder) revert NotFunder(msg.sender);
         if (subscriptionId != 0) revert AlreadySubscribed();
 
         SomniaExtensions.SubscriptionFilter memory filter = SomniaExtensions
@@ -139,12 +149,44 @@ contract CoverageSubscriber is SomniaEventHandler {
         return created;
     }
 
-    /// @notice Stop sampling.
+    /// @notice Stop sampling, and clear the stored id even if the chain has
+    /// already removed the subscription on its own.
+    ///
+    /// @dev The precompile is called low-level here rather than through
+    /// `SomniaExtensions.unsubscribe`, and that is the whole point of this
+    /// function rather than a shortcut through it.
+    ///
+    /// A subscription can be removed by the network without this contract being
+    /// told. DECISIONS.md D-032 records it happening: the prefund ran out, the
+    /// chain dropped the subscription, `somnia_reactivityGetSubscriptions`
+    /// returned an empty list, and `subscriptionId` still held the removed id.
+    /// `SomniaExtensions.unsubscribe` reverts `UnsubscribeFailed` when the
+    /// precompile rejects an id it no longer knows — and because the reset above
+    /// it lives in the same transaction, that revert rolls the reset back too.
+    /// The result is a contract that can never subscribe again: `subscribe`
+    /// refuses with `AlreadySubscribed` on an id no longer on chain, and the one
+    /// function that clears it cannot run. That wedged the first funded
+    /// deployment permanently and cost a redeploy.
+    ///
+    /// So a refusal from the precompile is not treated as failure. Being asked
+    /// to stop something already stopped is the goal reached by another route.
+    /// The outcome is not swallowed either: it is emitted, so a removal the
+    /// chain declined is visible on the log rather than assumed.
+    ///
+    /// @dev Restricted to the funder. Before this it was callable by anyone,
+    /// which let any address stop sampling for a live window — PRD §12's
+    /// griefing row, reachable without spending anything.
     function unsubscribe() external {
+        if (msg.sender != funder) revert NotFunder(msg.sender);
         uint256 current = subscriptionId;
         if (current == 0) revert NotSubscribed();
         subscriptionId = 0;
-        SomniaExtensions.unsubscribe(current);
+
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool acknowledged,) = SomniaExtensions.SOMNIA_REACTIVITY_PRECOMPILE_ADDRESS.call(
+            abi.encodeWithSelector(ISomniaReactivityPrecompile.unsubscribe.selector, current)
+        );
+        emit SubscriptionCleared(current, acknowledged);
     }
 
     /// @dev The recursion guard, stated as an assertion so it is testable.

@@ -232,6 +232,97 @@ contract CoverageSubscriberTest is Test {
         subscriber.subscribe(topics, _defaultOptions());
     }
 
+    /* ------------------------- clearing a subscription -------------------- */
+
+    /// @notice The regression test for the wedge that cost a live redeploy.
+    ///
+    /// @dev DECISIONS.md D-032: the network removed the funded subscription on
+    /// its own once the prefund ran out. `somnia_reactivityGetSubscriptions`
+    /// went empty while `subscriptionId` still held the removed id. From there
+    /// the deployed contract could not be recovered: `subscribe` refused with
+    /// `AlreadySubscribed`, and `unsubscribe` — which was the only way to clear
+    /// the id — reverted `UnsubscribeFailed`, because the precompile rejects an
+    /// id it no longer knows and the state reset shared that transaction.
+    ///
+    /// The property that was missing is this one: being asked to stop something
+    /// the chain has already stopped must leave the contract usable.
+    function test_unsubscribe_clears_the_id_even_when_the_chain_refuses() public {
+        bytes32[4] memory topics;
+        _answerPrecompile();
+        subscriber.subscribe(topics, _defaultOptions());
+        assertEq(subscriber.subscriptionId(), 7);
+
+        // The chain has removed subscription 7 without telling this contract, so
+        // the precompile now rejects it. This is exactly what happened on chain.
+        vm.mockCallRevert(
+            PRECOMPILE,
+            abi.encodeWithSelector(ISomniaReactivityPrecompile.unsubscribe.selector, uint256(7)),
+            "no such subscription"
+        );
+
+        vm.expectEmit(true, false, false, true, address(subscriber));
+        emit CoverageSubscriber.SubscriptionCleared(7, false);
+        subscriber.unsubscribe();
+
+        // Cleared, and — the part that actually matters — usable again.
+        assertEq(subscriber.subscriptionId(), 0, "a refused removal must still clear the id");
+        subscriber.subscribe(topics, _defaultOptions());
+        assertEq(subscriber.subscriptionId(), 7, "the contract must be able to subscribe again");
+    }
+
+    /// @notice And when the chain does agree, that is recorded as agreement.
+    /// @dev The two cases are distinguishable on the log, so a removal the chain
+    /// declined is visible rather than assumed.
+    function test_unsubscribe_records_that_the_chain_acknowledged() public {
+        bytes32[4] memory topics;
+        _answerPrecompile();
+        subscriber.subscribe(topics, _defaultOptions());
+
+        vm.expectCall(
+            PRECOMPILE,
+            abi.encodeWithSelector(ISomniaReactivityPrecompile.unsubscribe.selector, uint256(7))
+        );
+        vm.expectEmit(true, false, false, true, address(subscriber));
+        emit CoverageSubscriber.SubscriptionCleared(7, true);
+        subscriber.unsubscribe();
+        assertEq(subscriber.subscriptionId(), 0);
+    }
+
+    function test_unsubscribe_requires_a_subscription() public {
+        vm.expectRevert(CoverageSubscriber.NotSubscribed.selector);
+        subscriber.unsubscribe();
+    }
+
+    /* ------------------------- who may steer sampling --------------------- */
+
+    /// @notice Stopping a live window is not a stranger's decision.
+    /// @dev Before this, `unsubscribe` was callable by anyone: any address could
+    /// end sampling for a bonded window at the cost of one transaction, which is
+    /// PRD §12's griefing row reachable for free.
+    function test_only_the_funder_may_unsubscribe() public {
+        bytes32[4] memory topics;
+        _answerPrecompile();
+        subscriber.subscribe(topics, _defaultOptions());
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(CoverageSubscriber.NotFunder.selector, stranger));
+        subscriber.unsubscribe();
+        assertEq(subscriber.subscriptionId(), 7, "sampling must survive a stranger's attempt");
+    }
+
+    /// @notice Nor is starting one, because the caller picks who pays and how much.
+    /// @dev `options.gasLimit` and `options.maxFeePerGas` are chosen by the
+    /// caller and every callback is paid out of this contract's prefund, so an
+    /// unrestricted subscribe hands a stranger the spending decision.
+    function test_only_the_funder_may_subscribe() public {
+        bytes32[4] memory topics;
+        _answerPrecompile();
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(CoverageSubscriber.NotFunder.selector, stranger));
+        subscriber.subscribe(topics, _defaultOptions());
+        assertEq(subscriber.subscriptionId(), 0);
+    }
+
     /* ------------------------- funding ----------------------------------- */
 
     /// @notice The contract can actually be funded by a transfer.
