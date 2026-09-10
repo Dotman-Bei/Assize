@@ -951,3 +951,26 @@ sections, so toggling that class on a button did nothing — no error, no effect
 implementation that looked right. A generic `.hidden` utility now exists. A class that reads like a
 utility but is scoped to one selector fails silently every time it is reused, which is worth
 remembering. D-040.
+
+---
+
+## 2026-09-10 — Section spacing, and a second silent CSS failure
+
+Section headings now carry 112px above them, up from the 20px to 40px that seven inline
+`style="margin-top:…"` attributes had drifted to. Those attributes are gone; the rhythm lives in one
+rule, with `h2:first-child` at zero and headings inside a card taking a smaller 32px step, since a
+heading inside a card follows content in the same container rather than opening a new section.
+
+Measured on the built file rather than eyeballed: every visible section heading computes to a 112px
+margin and a 112px actual gap from the element above it.
+
+**The first attempt silently did nothing**, for the second time today. `--s-28` was written into the
+`h2` rule before it existed as a token, because the replacement that was supposed to add it did not
+match: the token line has no spaces after its colons and the pattern assumed there were. An undefined
+custom property makes the whole `margin` declaration invalid, so it computed to `0` rather than
+erroring.
+
+That is the same shape as the `.hidden` defect an hour earlier: CSS that is wrong does not fail, it
+just quietly does nothing, and a change that "looks applied" in the source can have no effect on the
+page. Both were caught by measuring the rendered result instead of trusting the diff, which is worth
+keeping as the habit.

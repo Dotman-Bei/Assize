@@ -332,7 +332,7 @@ function renderMarketDetail(c) {
   }
 
   $("#marketDetail").innerHTML = `
-    <h2 style="margin-top:var(--s-10)">Live coverage terminal</h2>
+    <h2>Live coverage terminal</h2>
     <p class="h2-sub">Market ${cut(c.marketId, 12, 8)} · DreamDEX event contract</p>
     <div class="grid g2">
       <div class="card">
@@ -354,7 +354,7 @@ function renderMarketDetail(c) {
       </div>
     </div>
     ${hasGap ? `<div class="gap-banner" style="margin-top:var(--s-3)">Sampling occurs at discrete instants. An unrecorded block tick is logged as NOT_SAMPLED rather than smoothed over.</div>` : ""}
-    <h2 style="margin-top:var(--s-8)">Live sample inspection ledger</h2>
+    <h2>Live sample inspection ledger</h2>
     <p class="h2-sub">${blocks} distinct blocks across the ${S.samples.length} most recent of ${num(S.total)} samples.
       <strong>×N</strong> counts samples that read the same book at the same block. The subscription
       matches every log the pool emits. Click a row for the stored struct.</p>
@@ -436,7 +436,7 @@ async function dossier(r) {
   try { const blk = await S.client.getBlock({ blockNumber: s.blockNumber }); pinOk = blk.parentHash.toLowerCase() === s.blockHash.toLowerCase(); } catch { pinOk = null; }
   const cmd = `npx assize verify ${r.b.sampleId} --rpc ${S.rpc}`;
   $("#breachDossier").innerHTML = `
-    <h2 style="margin-top:var(--s-8)">Breach proof dossier</h2>
+    <h2>Breach proof dossier</h2>
     <p class="h2-sub">Audit receipt for incident #BR-${String(r.i).padStart(5, "0")}.</p>
     <div class="card">
       <dl class="kv">
@@ -453,7 +453,7 @@ async function dossier(r) {
       <div class="note amber"><strong>Forfeited, not transferred.</strong> There is no claimant pool.
         This deployment has no settlement function, so the bond stays in the registry and no trader
         received anything.</div>
-      <h2 style="margin-top:var(--s-5)">Clean-room reproduction</h2>
+      <h2>Clean-room reproduction</h2>
       <div class="term"><button class="copy" data-copy="${esc(cmd)}">copy</button><pre>${esc(cmd)}</pre></div>
       <p class="h2-sub" style="margin-top:var(--s-2)">Any stranger can run this to re-read the chain at
         the pinned block and re-derive the identical verdict.</p>

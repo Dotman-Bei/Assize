@@ -31,7 +31,7 @@
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   /* Tailwind default spacing + radius */
   --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px;
-  --s-8:32px; --s-10:40px; --s-12:48px; --s-14:56px; --s-16:64px; --s-20:80px; --s-24:96px;
+  --s-8:32px; --s-10:40px; --s-12:48px; --s-14:56px; --s-16:64px; --s-20:80px; --s-24:96px; --s-28:112px;
   --r-md:6px; --r-lg:8px; --r-xl:12px; --r-full:9999px;
 }
 * { box-sizing: border-box; }
@@ -107,7 +107,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-5); }
 h1 { font-size: 52px; line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; margin: var(--s-6) auto 0; max-width: 18ch; }
 .hero p { color: var(--text-secondary); font-size: 16px; line-height: 1.65; max-width: 620px; margin: var(--s-5) auto 0; }
 .hero-cta { display: flex; gap: var(--s-2); justify-content: center; margin-top: var(--s-8); flex-wrap: wrap; }
-h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 var(--s-2); }
+/* Section headings carry their own space above rather than each caller passing
+   an inline margin. Seven of those had drifted between 20px and 40px; the rhythm
+   now lives in one rule. */
+h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: var(--s-28) 0 var(--s-2); }
+h2:first-child { margin-top: 0; }
+/* Inside a card a heading follows content in the same container, so it takes a
+   smaller step than a heading opening a new section of the page. */
+.card h2 { margin-top: var(--s-8); }
+.card h2:first-child { margin-top: 0; }
+.h2-sub + * { margin-top: var(--s-4); }
 .h2-sub { color: var(--text-muted); font-size: 14px; margin: 0 0 var(--s-4); line-height: 1.6; }
 .page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 var(--s-2); }
 
