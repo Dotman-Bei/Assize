@@ -974,3 +974,19 @@ That is the same shape as the `.hidden` defect an hour earlier: CSS that is wron
 just quietly does nothing, and a change that "looks applied" in the source can have no effect on the
 page. Both were caught by measuring the rendered result instead of trusting the diff, which is worth
 keeping as the habit.
+
+---
+
+## 2026-09-10 — Wordmark reveal repositioned and scaled
+
+Moved below "Hard protocol boundaries" so it closes the Overview page rather than separating the
+disclosures from the sections they qualify. Drawn at background scale: about 891 by 291 pixels
+rendered at 1440px wide, against roughly a third of that before, at 0.85 opacity with the resting
+stroke still on `--border-subtle`.
+
+Verified on the built file: the reveal now sits below the boundaries card (y 2486 against 1953), the
+container measures 300px, the pointer reveal still tracks (mask centre moves to 114 under the
+cursor), no console errors, no overflow at 390/768/1440. D-041 amends the placement in D-034.
+
+It is now the tallest element on the page and carries no information, which is a real cost recorded
+in D-041: 300px of scroll between the last disclosure and the footer, halved below 768px.

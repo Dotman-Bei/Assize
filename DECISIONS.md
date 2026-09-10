@@ -1182,3 +1182,26 @@ quietly every time it is reused.
 commitment now begins by choosing a tab. §2 already lost its "+ Post Commitment" button under D-033,
 so Overview's hero CTA is the only prompt toward `/publish` left on that screen. That is fine while
 the hero carries it, and worth re-checking at G9 if a tester stalls on the first screen.
+
+---
+
+## D-041: The wordmark reveal moved below the boundaries section and became background scale
+
+**Date:** 2026-09-10, Phase P4
+**Status:** accepted, on the owner's instruction. Amends the placement recorded in D-034.
+
+**Evidence.** D-034 placed the reveal above the "Hard protocol boundaries" box. It now sits below it,
+as the last thing on the Overview page before the footer, and is drawn at background scale: the
+wordmark renders about 891 by 291 pixels at 1440px wide, against roughly a third of that before.
+Opacity is 0.85 and the resting stroke stays on `--border-subtle`, so it reads as a ground the page
+ends on rather than as a line of copy.
+
+**Why the new position is better than the old one.** Above the boundaries box it separated the
+disclosures from the sections they qualify. Below it, the last thing a reader passes is the
+disclosure list, and the wordmark closes the page after the argument is finished rather than
+interrupting it.
+
+**Cost.** It is now the tallest single element on the Overview page and carries no information at
+all. On a first visit that is 300 pixels of scroll between the last disclosure and the footer, which
+is a real tax on someone looking for the footer links. Reduced to 150 pixels below 768px for that
+reason, and worth watching at G9: if a tester scrolls past the footer looking for it, this is why.

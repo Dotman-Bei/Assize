@@ -363,17 +363,20 @@ footer.site { border-top: 1px solid var(--border-subtle); margin-top: var(--s-24
  * particular no verdict colour is used decoratively, those carry meaning.
  * See DECISIONS.md D-034.
  */
-.reveal { height: 190px; margin: var(--s-16) 0 0; cursor: crosshair; }
+/* Sized to read as background rather than as a line of copy: it fills the
+   content width, sits well below the last section, and is faint enough that the
+   pointer reveal is the only thing that brings it forward. */
+.reveal { height: 300px; margin: var(--s-24) 0 calc(var(--s-16) * -1); cursor: crosshair; opacity: 0.85; }
 .reveal text {
-  font-family: var(--font-sans); font-size: 58px; font-weight: 700;
-  letter-spacing: 0.06em; fill: transparent; stroke-width: 0.4;
+  font-family: var(--font-sans); font-size: 80px; font-weight: 700;
+  letter-spacing: 0.02em; fill: transparent; stroke-width: 0.35;
 }
 .reveal .r-rest { stroke: var(--border-subtle); }
 .reveal .r-draw { stroke: var(--border-strong); stroke-dasharray: 1000; stroke-dashoffset: 1000; }
 .reveal.on .r-draw { animation: draw 3.2s ease-in-out forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.reveal .r-lit { stroke: var(--text-primary); stroke-width: 0.9; }
+.reveal .r-lit { stroke: var(--text-primary); stroke-width: 0.7; }
 @media (prefers-reduced-motion: reduce) {
   .reveal .r-draw { stroke-dashoffset: 0; animation: none; }
 }
-@media (max-width: 768px) { .reveal { height: 120px; margin-top: var(--s-12); } }
+@media (max-width: 768px) { .reveal { height: 150px; margin: var(--s-16) 0 calc(var(--s-8) * -1); } }
