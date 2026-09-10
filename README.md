@@ -121,6 +121,12 @@ cast call $REG "forfeitureOf(uint256)(bool,uint256)" 0 --rpc-url $RPC
 # The callback. from and to are both the subscriber, and the nonce is the
 # block-unique reactivity nonce: validators delivered this, we did not.
 cast tx 0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf --rpc-url $RPC
+
+# The block pin. The sample stores block 484439389 and the hash of its parent,
+# because a contract cannot see the hash of the block it is running in. These
+# two must be identical, and that is what ties the sample to one block on one chain.
+cast call $REG "sampleAt(uint256)((uint256,(uint128,uint128,uint128,uint128,uint64,bytes32,uint8)))" 0 --rpc-url $RPC
+cast block 484439389 --field parentHash --rpc-url $RPC
 ```
 
 **Do not take the registry's word for it.** From a clean clone, this re-derives every verdict with
@@ -169,9 +175,10 @@ registry. Anything implying a trader was made whole would be false.
 adoption, and not demand. It published a commitment it did not keep, which is what it exists to do.
 
 **The block pin is a parent hash.** A contract cannot observe the hash of the block it is executing
-in, so a sample stores block *N* alongside the hash of *N-1*. Verify it as
-`getBlock(n).parentHash == sample.blockHash`. It pins the sample to one block on one chain just as
-tightly, but it is not what the field name suggests.
+in, so a sample stores block *N* alongside the hash of *N-1*. Verify it with the last two commands
+above: `cast block <n> --field parentHash` must equal the sample's `blockHash`. It pins the sample to
+one block on one chain just as tightly, but it is not what the field name suggests, and a verifier
+that checks it as a block hash will reject every honest sample.
 
 ## Limitations
 

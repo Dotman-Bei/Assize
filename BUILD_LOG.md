@@ -528,3 +528,58 @@ pnpm evidence:report                       exit 0  read back from chain
 pnpm claim:verify -- --offline              exit 0  every claim at or below its evidence
 forge test                                  exit 0
 ```
+
+---
+
+## 2026-09-10 — G7: the documents, and a clean-room test that actually ran
+
+**Outcome. G7's re-derivation half passes, tested rather than assumed. Its "live app" half does not
+exist and is recorded as not existing.**
+
+### Files
+
+`README.md` (five beats, mechanism block, live evidence, verification, limitations), `SETUP.md`,
+`SECURITY.md`, `ARCHITECTURE.md`, `LICENSE`. `DEPLOYMENT.md` already existed.
+
+### The clean-room test
+
+A real `git clone` into a scratch directory, `pnpm install`, then only the commands the README
+prints — nothing from this working tree, no environment carried over.
+
+```
+commitmentAt(0)   maker, market, maxSpread 15000, minSize 1e8, bond 1 STT, forfeited flag set
+sampleAt(0)       bid 686000, ask 714000, sizes 2e8, block 484439389, pin 0x2b8acbba…, source 1
+verdictOf(0)      4  (SPREAD_BREACH)
+forfeitureOf(0)   true, breach 0
+cast tx …         from and to both the subscriber; the reactivity nonce
+claim:verify      re-derived 25/25 stored samples with packages/reference; all agree with the chain
+```
+
+All of it from a public RPC, with no account and no API key.
+
+### One thing the test caught
+
+The README claimed the block pin could be checked as `getBlock(n).parentHash == sample.blockHash`
+but gave no command for it. Writing one exposed that `cast block --json` wraps its output in
+`{data:{…}}`, so the obvious `.parentHash` read returns `undefined` — which looks exactly like a pin
+that does not resolve. The pin was correct all along; the check was wrong.
+
+That is the failure mode this gate exists to find, and it was found in a script rather than by a
+judge. The README now prints `cast block <n> --field parentHash`, which needs no JSON handling, and
+the misleading-results section warns that a verifier treating the field as a block hash rather than a
+parent hash will reject every honest sample.
+
+### G7, stated precisely
+
+Passes: a stranger can re-derive a recorded verdict from a fresh clone using only the README.
+Does not pass: "a stranger reaches the live app". There is no web app. K10 protects G7, G9 and G12
+over building one, so this is recorded as partly met rather than claimed.
+
+### Commands
+
+```
+git clone … && pnpm install                 exit 0
+<the five README commands>                  all resolve
+pnpm claim:verify (from the clone)          exit 0   25/25 re-derived
+pnpm check:vocabulary                        exit 0
+```

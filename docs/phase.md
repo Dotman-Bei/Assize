@@ -34,8 +34,15 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
 
 ## What remains, in K10's protected order
 
-1. **G7** — a stranger reaching the live evidence and re-deriving one breach from the README alone.
-   `DEPLOYMENT.md` carries copy-pasteable commands that need no account and no API key.
+1. **G7 — the re-derivation half passes; the "live app" half does not exist.**
+   Tested for real: a fresh `git clone`, `pnpm install`, and only the README's own commands. All five
+   chain reads resolve, the block pin checks out against `cast block --field parentHash`, and
+   `pnpm claim:verify` re-derived 25 of 25 stored samples with `packages/reference` and agreed with
+   the chain every time — no account, no API key, no access to anything of ours.
+
+   G7 as written also says "a stranger reaches the live app". There is no web app: P4 was not built
+   and K10 protects G7, G9 and G12 over it. So G7 is **partly met**, and it is recorded that way
+   rather than claimed. What a stranger can do today is verify; what they cannot do is browse.
 2. **G9** — three first-time users completing the core action unaided. Needs a UI, and needs people.
 3. **G12** — submission package: README to the five beats, demo video, feedback report.
 
