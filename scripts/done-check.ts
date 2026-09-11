@@ -47,7 +47,7 @@ function read(rel: string): string {
 
 function runs(script: string): boolean {
   try {
-    execFileSync("pnpm", ["-s", script], { cwd: REPO_ROOT, stdio: "ignore", timeout: 600_000 });
+    execFileSync("pnpm", ["-s", ...script.split(" ")], { cwd: REPO_ROOT, stdio: "ignore", timeout: 600_000 });
     return true;
   } catch {
     // Not swallowed: a non-zero exit is the answer, and the caller reports it.
@@ -69,7 +69,7 @@ function commitsUnlogged(file: string): readonly string[] {
 
 function main(): void {
   const decl = declaration();
-  const demo = decl["demo"] as { beat4NobodyWasPaidStatement: string | null } | undefined;
+  const demo = decl["demo"] as { beat4LimitationStatement: string | null } | undefined;
   const items: Item[] = [];
 
   /* 1 ---------------------------------------------------------------- */
@@ -93,12 +93,19 @@ function main(): void {
   });
 
   /* 3 ---------------------------------------------------------------- */
-  // A payout needs settlement code, and none is deployed. This is the item that
-  // must never be reported as partly done: two of three is not this checkbox.
+  // This was hardcoded `unmeetable` while settlement was cut: no deployed code
+  // could perform a payout, so no run could have satisfied it. P3 shipped and a
+  // bond was paid out (D-047), so the item is now decided by chain rather than
+  // by this file's opinion. `verify:testnet -- C-005` reads paidOut,
+  // witnessedVolume and the bond and checks the payout against them.
+  const payout = runs("verify:testnet -- C-005");
+  const sampleAndBreach = runs("verify:testnet -- C-004");
   items.push({
     n: 3, text: "A live sample, a real breach, and a real payout, all re-derivable",
-    state: "unmeetable",
-    detail: "sample and breach are on chain and re-derive; no deployed code can perform a payout (K10, D-021)",
+    state: payout && sampleAndBreach ? "met" : "not-met",
+    detail: payout && sampleAndBreach
+      ? "verify:testnet C-004 and C-005 both pass against chain; the bond was paid to a witnessed trader"
+      : `sample/breach ${sampleAndBreach ? "pass" : "FAIL"}, payout ${payout ? "pass" : "FAIL"}`,
   });
 
   /* 4 ---------------------------------------------------------------- */
@@ -152,7 +159,7 @@ function main(): void {
 
   /* 8 ---------------------------------------------------------------- */
   const video = decl["videoUrl"];
-  const beat4 = demo?.beat4NobodyWasPaidStatement ?? null;
+  const beat4 = demo?.beat4LimitationStatement ?? null;
   items.push({
     n: 8, text: "Demo video recorded, 2 to 3 minutes, to the five beats",
     state: typeof video === "string" && video.length > 0 ? "met" : "not-met",
