@@ -57,7 +57,7 @@ const LIFECYCLE = [
   ["Book event", "on a DreamDEX event contract", true],
   ["Reactive sample", "written by Somnia validators", true],
   ["Deterministic verdict", "computed from stored data alone", true],
-  ["Settlement", "not deployed in this build", false],
+  ["Settlement", "pro-rata to witnessed traders", true],
 ];
 
 async function boot() {
@@ -247,16 +247,22 @@ function renderLifecycle() {
       <div class="how-qualifier">${qualifier}</div>
     </div>`).join("");
   // The fifth step is the one that needs saying out loud rather than implying.
-  $("#lifecycleDetail").innerHTML = `<div class="note amber" style="margin-top:var(--s-3)">
-    <strong>Settlement is designed and not deployed.</strong> The payout path was cut under this
-    project's own kill criteria when the submission window got short. A bond is recorded as forfeited
-    and no trader is paid, because the code that would pay them is not in this deployment.</div>`;
+  // It said the opposite until 2026-09-11: settlement was cut under K10, and this
+  // panel told every visitor that no trader could be paid. That was true of the
+  // deployment it was written against and false of this one, which is the kind
+  // of sentence that has to change in the same commit as the code it describes.
+  $("#lifecycleDetail").innerHTML = `<div class="note" style="margin-top:var(--s-3)">
+    <strong>Settlement is deployed, and one bond has been paid out.</strong> A trader who took
+    liquidity while the commitment did not hold claimed the forfeited bond in full. Being witnessed
+    is not a claim anyone makes about themselves: it is the join of two pool logs — one naming who
+    placed an order, the other naming what that order filled — recorded by the reactivity precompile
+    and joined on chain at claim time.</div>`;
 }
 
 function renderBoundaries() {
   $("#boundaries").innerHTML = [
     ["Evaluations occur at sampled instants.", "Assize does not promise continuous coverage. A sample is one reading at one block, not a window, not an average, and not proof the book held between two samples."],
-    ["Payouts reach witnessed traders only, and none has been paid.", "The registry can only ever pay addresses it saw trading. In this deployment it pays nobody: there is no settlement function at all."],
+    ["Payouts reach witnessed traders only.", "The registry can only pay addresses it saw trading inside the window, and it can only learn that from the pool's own logs. One bond has been paid out this way. A trader who never filled has nothing to claim, however much they lost."],
     ["The sample count is not the observation count.", "The subscription matches every log the pool emits, so a busy block yields several samples of one instant. Distinct blocks is the honest measure and both are shown."],
     ["The maker is ours.", "Labelled PROJECT_BASELINE. Not a third party, not adoption, not demand. It published a commitment it did not keep, which is what it exists to do."],
     ["The block pin is a parent hash.", "A contract cannot observe the hash of the block it runs in, so a sample stores block N with the hash of N−1. A verifier treating it as a block hash rejects every honest sample."],
@@ -450,9 +456,9 @@ async function dossier(r) {
         <dt>SOURCE</dt><dd>${src(sampleSourceFromCode(Number(s.source)))} · callback tx ${cut(S.cfg.evidence.callbackTx, 10, 8)}</dd>
         <dt>COLLATERAL</dt><dd>${c ? formatEther(c.bond) : "0"} STT forfeited</dd>
       </dl>
-      <div class="note amber"><strong>Forfeited, not transferred.</strong> There is no claimant pool.
-        This deployment has no settlement function, so the bond stays in the registry and no trader
-        received anything.</div>
+      <div class="note"><strong>Forfeited, and claimable by whoever was exposed.</strong> The bond is
+        payable pro-rata to traders the registry saw filling inside the window, and to nobody else.
+        A trader who never filled has nothing to claim here, however much the book cost them.</div>
       <h2>Clean-room reproduction</h2>
       <div class="term"><button class="copy" data-copy="${esc(cmd)}">copy</button><pre>${esc(cmd)}</pre></div>
       <p class="h2-sub" style="margin-top:var(--s-2)">Any stranger can run this to re-read the chain at
@@ -578,11 +584,12 @@ async function doPublish() {
 /* ── Page 5: trader settlement portal ─────────────────────────────────────── */
 function renderClaim() {
   $("#claimBody").innerHTML = `
-    <div class="note rose"><strong>This portal cannot pay anyone, and says so rather than pretending.</strong>
-      The deployed registry has no <code>claim(breachId)</code> function: witnessed volume and pro-rata
-      settlement were cut under this project's kill criteria when the submission window got short.
-      A forfeited bond stays in the registry. Every state below is therefore reported against a
-      settlement path that does not exist on chain.</div>
+    <div class="note"><strong>This portal pays only addresses the chain saw trading.</strong>
+      <code>claim(breachId, orderIds)</code> checks every order you name against
+      <code>orderOwner</code>, which the registry learned from the pool's own <code>OrderPlaced</code>
+      log — so a claim is never taken on your word. Your share is
+      <code>bond × yourVolume ÷ witnessedVolume</code>, and it can only be taken once the window has
+      closed, because until then the denominator is still moving.</div>
     <div class="card" style="margin-top:var(--s-3)">
       <div class="stat-label">Connected wallet audit</div>
       <dl class="kv" style="margin-top:var(--s-3)">

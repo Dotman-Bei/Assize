@@ -226,10 +226,17 @@ otherwise.
 reaches all seven is shown by `pnpm test:differential`, which agrees across 10,000 generated pairs —
 not by this run.
 
-**Nobody was paid.** Assize records that a bond is forfeited. It does not distribute it. The payout
-and claim path were cut under the project's own kill criteria (K10) when the submission window got
-short, and the contract has no settlement function at all. A forfeited bond currently stays in the
-registry. Anything implying a trader was made whole would be false.
+**A payout reaches witnessed traders only.** One forfeited bond has been paid out in full, to the
+trader the registry saw filling inside the window
+([claim tx](https://shannon-explorer.somnia.network/tx/0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25)).
+Being witnessed is not something a claimant asserts: the registry learns it from the pool's own
+`OrderPlaced` and `OrderFilled` logs and joins them on order id, and `claim` reverts on an order you
+did not place. So if you held the position and lost money without trading during that window, this
+pays you nothing. That is a real limit on what the instrument does, not a temporary gap.
+
+Two things are still not claimed. There was one witnessed trader, so the pro-rata split has never
+been exercised against competing claimants on chain — that rests on tests and the invariant run.
+And the trader was our own account. This is a working payout, not adoption.
 
 **The maker is us.** It is labelled `PROJECT_BASELINE` everywhere. It is not a third party, not
 adoption, and not demand. It published a commitment it did not keep, which is what it exists to do.
@@ -243,7 +250,10 @@ that checks it as a block hash will reject every honest sample.
 ## Limitations
 
 - Sampling happens at instants, not continuously.
-- No payout exists in this deployment. Measurement and penalty recording only.
+- A payout reaches only traders the chain saw filling inside the window. Holding a position is not
+  enough, however much it cost.
+- One witnessed trader so far, so the pro-rata split is covered by tests rather than by a
+  transaction with competing claimants.
 - One market. One maker, and that maker is ours.
 - The handler reads the top of the book only — best bid and best ask.
 - Somnia's public RPC serves neither `eth_getProof` nor EIP-1898 block-hash parameters, so
@@ -256,10 +266,9 @@ through a public RPC, which is the product's claim applied to its own interface:
 be trusted, the thesis would be broken. Build it with `pnpm --filter @assize/web build`, or run
 `pnpm --filter @assize/web dev` and open `http://localhost:5173`.
 
-It carries the live commitment, the sample stream grouped by instant, the breach evidence, and the
-verification commands generated from the deployment record it loaded. The claim portal from the
-design specification is absent: payouts were cut under K10, and a surface for claiming something
-nobody can claim would be a lie.
+It carries the live commitment, the sample stream grouped by instant, the breach evidence, the claim
+portal, and the verification commands generated from the deployment record it loaded. The claim
+portal pays only addresses the chain saw trading, and says so on its face rather than in a footnote.
 
 ## Feedback to the organisers
 
@@ -299,7 +308,7 @@ evidence/            run output, read back from chain
 | G2 | the two evaluators agree, 10,000 pairs | **pass** |
 | G3 | a live sample delivered by the reactivity path | **pass** |
 | G4 | a real breach recorded against a live market | **pass** |
-| G5 | a payout executed | **cut under K10** |
+| G5 | a payout executed | **pass** |
 | G6 | a sustained 24h campaign | not attempted |
 | G11 | handler funding proven on chain | partly — cost per sample measured, no UI state |
 

@@ -25,13 +25,20 @@ contract RegistryHandler is Test {
     uint256 public witnessCalls;
     uint256 public claimCalls;
     uint256 public rejectedClaims;
+    bytes4 public lastClaimRevert;
 
     address[3] internal makers = [makeAddr("maker-a"), makeAddr("maker-b"), makeAddr("maker-c")];
     bytes32[2] internal markets = [keccak256("market-a"), keccak256("market-b")];
     address[3] internal traders =
         [makeAddr("trader-a"), makeAddr("trader-b"), makeAddr("trader-c")];
 
-    uint128[] internal seenOrders;
+    /// @dev Orders indexed BY COMMITMENT. A claim pays from the bond of the
+    /// commitment its breach belongs to, and reads volume from that same
+    /// commitment's books — so an order witnessed against a different commitment
+    /// has nothing to claim. Picking a breach and an order independently made
+    /// every claim revert `NothingToClaim`, and 8192 calls executed no
+    /// settlement at all.
+    mapping(uint256 => uint128[]) internal ordersByCommitment;
     mapping(uint128 => address) internal orderTrader;
 
     constructor() {
@@ -48,7 +55,10 @@ contract RegistryHandler is Test {
         bytes32 market = markets[bound(marketSeed, 0, markets.length - 1)];
         uint256 value = bound(bond, 1, 10 ether);
         uint64 start = uint64(block.number);
-        uint64 end = start + uint64(bound(windowLength, 0, 100_000));
+        // Short windows on purpose. `claim` refuses until the window closes, so a
+        // 100_000-block window is one no sequence of calls can ever settle — and
+        // the settlement invariants would then pass by never running.
+        uint64 end = start + uint64(bound(windowLength, 0, 2_000));
 
         vm.prank(maker);
         try registry.publishCommitment{value: value}(market, maxSpread, minSize, start, end) {
@@ -78,12 +88,29 @@ contract RegistryHandler is Test {
             return;
         }
         uint256 commitmentId = bound(commitmentSeed, 0, count - 1);
+
+        // Aim most samples INSIDE the commitment's window, and let one in eight
+        // fall outside it.
+        //
+        // A uniformly random uint64 block number is outside every window with
+        // overwhelming probability, so the verdict is `WINDOW_CLOSED` and no
+        // breach is ever recorded. That was survivable while windows ran to
+        // 100_000 blocks and the fuzzer's own bias toward small values landed
+        // the occasional sample inside; shortening windows so claims could
+        // settle made it rare, and the run became seed-dependent — passing under
+        // one seed and failing `afterInvariant` under the next. A flaky
+        // invariant is worse than a missing one, because it teaches you to rerun.
+        AssizeRegistry.Commitment memory window = registry.commitmentAt(commitmentId);
+        uint64 at = bound(blockNumber, 0, 7) == 0
+            ? uint64(bound(blockNumber, 1, type(uint64).max))
+            : uint64(bound(blockNumber, window.start, window.end));
+
         Sample memory reading = Sample({
             bid: bid,
             ask: ask,
             bidSize: bidSize,
             askSize: askSize,
-            blockNumber: uint64(bound(blockNumber, 1, type(uint64).max)),
+            blockNumber: at,
             blockHash: keccak256(abi.encode(blockNumber, bid, ask)),
             source: bound(sourceSeed, 0, 1) == 0 ? SampleSource.REACTIVITY : SampleSource.KEEPER
         });
@@ -108,9 +135,23 @@ contract RegistryHandler is Test {
         address trader = traders[bound(traderSeed, 0, traders.length - 1)];
 
         registry.attributeOrder(orderId, trader);
-        registry.witnessFill(commitmentId, orderId, bound(quantity, 1, 1e18));
-        orderTrader[orderId] = trader;
-        seenOrders.push(orderId);
+        // Volumes within four orders of magnitude of each other, so a share is
+        // a share rather than dust. Unbounded below, the fuzzer paired a volume
+        // of 1 against a denominator of 1e18 and every claim truncated to zero —
+        // `NothingToClaim`, which is the contract being right and the harness
+        // being unrealistic. Truncation to zero is covered deliberately by
+        // test_a_trader_with_no_volume_claims_nothing instead.
+        registry.witnessFill(commitmentId, orderId, bound(quantity, 1e14, 1e18));
+        // Only count it if the fill actually landed inside the window; outside
+        // it, `witnessFill` records nothing and there would be nothing to claim.
+        if (registry.fillVolumeOf(commitmentId, orderId) == 0) return;
+        // Read the owner back rather than assuming it is the one just passed.
+        // `attributeOrder` is write-once, so when the fuzzer reuses an order id
+        // with a different trader the registry keeps the FIRST — and a harness
+        // that recorded the latest then claimed as the wrong address, which
+        // `claim` correctly refused with `NotTheOrderOwner`.
+        orderTrader[orderId] = registry.orderOwner(orderId);
+        ordersByCommitment[commitmentId].push(orderId);
         witnessCalls += 1;
     }
 
@@ -120,14 +161,21 @@ contract RegistryHandler is Test {
     /// may truncate to zero.
     function claimOne(uint256 breachSeed, uint256 orderSeed) external {
         uint256 breaches = registry.breachCount();
-        if (breaches == 0 || seenOrders.length == 0) return;
-        // Windows must be able to close, or `claim` is unreachable and the
-        // settlement invariants would pass by never executing any settlement.
-        vm.roll(block.number + 1_000);
+        if (breaches == 0) return;
         uint256 breachId = bound(breachSeed, 0, breaches - 1);
-        uint128 orderId = seenOrders[bound(orderSeed, 0, seenOrders.length - 1)];
+
+        // The order has to be one witnessed against THIS breach's commitment.
+        AssizeRegistry.Breach memory breach = registry.breachAt(breachId);
+        uint128[] storage orders = ordersByCommitment[breach.commitmentId];
+        if (orders.length == 0) return;
+        uint128 orderId = orders[bound(orderSeed, 0, orders.length - 1)];
         address trader = orderTrader[orderId];
         if (trader == address(0)) return;
+
+        // Roll past the end of that commitment. Rolling a fixed distance instead
+        // left every claim refused as `WindowStillOpen`.
+        AssizeRegistry.Commitment memory c = registry.commitmentAt(breach.commitmentId);
+        if (block.number <= c.end) vm.roll(uint256(c.end) + 1);
 
         uint128[] memory ids = new uint128[](1);
         ids[0] = orderId;
@@ -140,13 +188,13 @@ contract RegistryHandler is Test {
             totalPaidOut += trader.balance - before;
             require(amount == trader.balance - before, "claim paid a different amount than it returned");
             claimCalls += 1;
-        } catch {
-            // A rejected claim is a valid outcome and moves no money: the bond
-            // is not forfeited, the order is already settled, or the share
-            // truncated to zero. AGENTS.md forbids an empty catch, so this one
-            // says why and leaves every tally untouched, which the invariants
-            // then check.
+        } catch (bytes memory reason) {
+            // A rejected claim is a valid outcome and moves no money. The reason
+            // is kept rather than discarded: when no claim succeeded at all, the
+            // question is which guard refused them, and an empty catch cannot
+            // answer it. AGENTS.md forbids the empty catch for this reason.
             rejectedClaims += 1;
+            lastClaimRevert = bytes4(reason);
         }
     }
 }
@@ -253,6 +301,21 @@ contract BondConservationTest is Test {
             registry.breachCount(),
             0,
             "the sequence never recorded a breach, so the breach invariants proved nothing"
+        );
+        // P3. The settlement invariants are about money moving, and a run where
+        // nothing was ever witnessed or claimed satisfies all three of them
+        // without executing a single line of `claim`. That is the same vacuous
+        // pass this function already existed to catch, one phase later.
+        assertGt(handler.witnessCalls(), 0, "nothing was ever witnessed");
+        assertGt(
+            handler.claimCalls(),
+            0,
+            string.concat(
+                "no claim ever succeeded, so the settlement invariants proved nothing. rejected=",
+                vm.toString(handler.rejectedClaims()),
+                " lastRevert=",
+                vm.toString(handler.lastClaimRevert())
+            )
         );
     }
 

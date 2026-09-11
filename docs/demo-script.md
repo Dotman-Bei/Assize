@@ -19,10 +19,12 @@ in front of the viewer" — **cannot be performed live.** Show the recorded stre
 completed run. Saying "watch the samples come in" over a closed window would be false in the one
 place nobody can verify it.
 
-**2. Nobody was paid.** §23 beat 4 ends with a witnessed trader claiming the bond. That path was
-cut under K10 (D-021) and `AssizeRegistry` has no settlement function. Say so out loud. The
-sentence you use goes into `submission.json` as `demo.beat4NobodyWasPaidStatement`, and the gate
-checks it is there.
+**2. Beat 4 is now performable as written, and has its own limit to state.** Settlement shipped
+(D-047): a witnessed trader claimed a forfeited bond in full and the transaction is on chain. What
+still has to be said out loud is who a payout can reach — **traders the chain saw filling inside the
+window, and nobody else.** Someone who held the position and lost money without trading is owed
+nothing here. The sentence you use goes into `submission.json` as
+`demo.beat4LimitationStatement`, and the gate checks it is there.
 
 ---
 
@@ -92,11 +94,20 @@ a public RPC — no account, no key, no access to anything of ours:
 pnpm assize verify 0
 ```
 
-> The bond is recorded as forfeited. And here is the part that has to be said plainly:
+> The bond is forfeited. And then it is paid — to the trader the registry saw filling while the
+> commitment did not hold.
+
+**Show the claim transaction**
+`0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25` — 1 STT, the whole bond, to the
+sole witness.
+
+> Being witnessed is not something you assert about yourself. One pool log says who placed an order;
+> another says what that order filled. The registry joins them, and refuses a claim on an order you
+> did not place.
 >
-> **Nobody was paid. No bond was paid out to anyone.** The payout path was cut when the submission
-> window got short, and the registry has no settlement function at all — you can check that, it is
-> not a policy choice we could quietly reverse. A forfeit here is recorded, not distributed.
+> So here is the limit, plainly: **a payout reaches traders the chain saw trading inside that
+> window, and nobody else.** If you held the position and lost money without trading, this pays you
+> nothing.
 >
 > The other limit is just as real: this measures instants, not intervals. A sample is one reading
 > at one block. It is not proof the book held between two samples, and we never count it as one.
@@ -114,9 +125,9 @@ pnpm assize verify 0
 ## Checklist before you upload
 
 - [ ] Beat 3 says "completed run", never "watch them arrive"
-- [ ] Beat 4 says nobody was paid, out loud, not on a slide
+- [ ] Beat 4 says who a payout can reach, out loud, not on a slide
 - [ ] Beat 4 says sampling happens at instants
 - [ ] `pnpm assize verify 0` was run on camera and passed
 - [ ] Total runtime between 2:00 and 3:00
-- [ ] Then fill in `submission.json`: `videoUrl` and `demo.beat4NobodyWasPaidStatement`
+- [ ] Then fill in `submission.json`: `videoUrl` and `demo.beat4LimitationStatement`
 - [ ] `pnpm submission:check`

@@ -52,7 +52,7 @@ interface Declaration {
   readonly liveAppUrl: string | null;
   readonly videoUrl: string | null;
   readonly feedbackFiledAt: string | null;
-  readonly demo: { readonly beat4NobodyWasPaidStatement: string | null };
+  readonly demo: { readonly beat4LimitationStatement: string | null };
 }
 
 interface Deployment {
@@ -313,41 +313,50 @@ async function checkVideo(url: string | null): Promise<Check> {
 }
 
 /**
- * Beat 4 cannot be performed as PRD §23 writes it, and the video must say so.
- * @remarks §23 ends beat 4 with a witnessed trader claiming the bond. The payout
- * path was cut under §26 K10 (DECISIONS.md D-021) and `AssizeRegistry` has no
- * settlement function, so no claim can be shown. A demo that stages one anyway
- * would be the exact failure PRD §21 forbids — a claim above its evidence — and
- * it would be the most damaging place to make it, because the audience cannot
- * check. So the statement is required, and it is required to be specific.
+ * Beat 4 must state the limitation that survives settlement being real.
+ *
+ * @remarks This check used to require the opposite. Settlement was cut under
+ * §26 K10, so beat 4 could not be performed as §23 writes it, and the video was
+ * required to say out loud that nobody was paid. That is no longer true: P3
+ * shipped, a witnessed trader claimed a forfeited bond in full, and the
+ * transaction is on chain (D-047). A gate still demanding "nobody was paid"
+ * would now be enforcing a false statement, which is worse than enforcing none.
+ *
+ * What replaces it is the limitation §23 beat 4 actually names, and it is the
+ * one a viewer is most likely to get wrong: **payouts reach witnessed traders
+ * only.** The registry can pay an address only if it saw that address fill
+ * inside the window, learned from the pool's own logs. Someone who held the
+ * position and lost money but never traded during the window is owed nothing
+ * here. A demo that implies otherwise oversells the instrument in the place an
+ * audience can least check it.
  */
 function checkBeatFourHonesty(statement: string | null): Check {
-  const name = "beat 4 states that nobody was paid (PRD §26 K10)";
+  const name = "beat 4 states who a payout can reach (PRD §23)";
   if (statement === null) {
     return {
       name,
       state: "outstanding",
       lines: [
-        "submission.json: demo.beat4NobodyWasPaidStatement is null",
-        "the payout path is cut, so the video must say out loud that no bond was paid out",
+        "submission.json: demo.beat4LimitationStatement is null",
+        "settlement is live, so the video must say out loud that only witnessed traders can be paid",
       ],
     };
   }
   // A heuristic, and named as one. It cannot judge whether a sentence is true,
-  // only that the declaration is on the subject at all: it must negate, and it
-  // must be about payment. That rejects a beat 4 note which never mentions the
-  // cut, and accepts the several honest ways of saying it. The guarantee is the
-  // owner writing the words and saying them; this stops the field being filled
-  // with something unrelated to get the gate green.
-  const negates = /\b(?:no|not|never|nobody|none|nothing|zero|cannot|without)\b/iu.test(statement);
-  const aboutPayment = /\b(?:paid|pay|payout|payouts|payment|settle|settled|settlement|claim|claimed|claims)\b/iu.test(statement);
-  const saysNobodyPaid = negates && aboutPayment;
+  // only that the declaration is on the subject: it must be about payment, and
+  // it must scope who a payment reaches. That rejects a beat 4 note which never
+  // mentions the limit, and accepts the several honest ways of stating it.
+  const aboutPayment = /\b(?:paid|pay|payout|payouts|payment|settle|settled|settlement|claim|claimed|claims|bond)\b/iu
+    .test(statement);
+  const scopesWho = /\b(?:witness|witnessed|only|nobody|no one|none|traded|trading|filled|fill)\b/iu
+    .test(statement);
+  const saysNobodyPaid = aboutPayment && scopesWho;
   if (!saysNobodyPaid) {
     return {
       name,
       state: "fail",
       lines: [
-        `the declared statement does not say that nobody was paid: ${JSON.stringify(statement)}`,
+        `the declared statement does not scope who a payout reaches: ${JSON.stringify(statement)}`,
         "it must be unambiguous, because a viewer cannot check it against chain",
       ],
     };
@@ -389,7 +398,7 @@ async function main(): Promise<void> {
     await checkEverythingIsPushed(declaration.repository),
     await checkLiveApp(declaration.liveAppUrl),
     await checkVideo(declaration.videoUrl),
-    checkBeatFourHonesty(declaration.demo.beat4NobodyWasPaidStatement),
+    checkBeatFourHonesty(declaration.demo.beat4LimitationStatement),
     checkFeedbackFiled(declaration.feedbackFiledAt),
   ];
 

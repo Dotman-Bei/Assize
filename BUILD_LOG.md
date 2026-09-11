@@ -1192,3 +1192,69 @@ make that gate assert something untrue.
 
 `docs/filing-feedback.md` holds a paste-ready issue for the Bot Kit, which has issues enabled;
 `@somnia-chain/reactivity-contracts` has no public repository, so finding 9 has no tracker of its own.
+
+## 2026-09-11 — A bond was forfeited, and paid to the trader it failed
+
+P3 shipped and settled on Shannon. D-047 has the decision; this is what the live run cost.
+
+```
+registry   0x829465c447eD558b108001d472B5190424DCBfCc
+claim tx   0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25
+BondClaimed(commitment 0, breach 0, claimant <deployer>, volume 5000000, amount 1e18)
+registry balance after: 0
+```
+
+**Four things the live run corrected that no test could have.**
+
+`SUBSCRIPTION_OWNER_MINIMUM_BALANCE` is **32 ether**, checked at subscribe time. The deploy script
+funded 20 and was refused `InsufficientBalance` (`0xf4d678b8`). The floor is now read out of the
+pinned package rather than typed as a number.
+
+The failure also truncated the state file, because `>` truncates before the command that fills it
+can fail, and a later line referenced an out-of-scope variable under `set -u`. Addresses are written
+immediately after deploying now — a deployed contract whose address exists only in a terminal
+scrollback is a contract you can lose.
+
+`placeOrder` reverts **`UseBinaryPlacement`** on this pool. Binary markets take `placeBinaryOrder`,
+different signature, different argument order. And the maker cannot rest an ask at all: `SELL_YES`
+reverts `InsufficientPermission` without YES inventory.
+
+Quotes were hardcoded from a book reading taken ten minutes earlier. By the time the window opened
+the book had moved from 839000/863000 to 900000/922000, which put the maker's "ask" below the best
+bid — a `POST_ONLY` order that cannot rest without taking, so the pool refuses it. Prices are derived
+from the live book at placement time now.
+
+**And one design error, which was mine.** The witness does not have to fill against our own maker. A
+witnessed trader is anyone who took liquidity inside the window, so the deployer crossing a third
+party's resting ask is exactly as real — arguably more so, being genuine market liquidity rather than
+our own quote on both sides. Half the choreography above was unnecessary.
+
+**The breach was not staged.** The live book sat around 22000 wide against a committed 15000 for the
+whole window. The commitment was simply wrong about the book it described.
+
+## 2026-09-11 — Two invariants were passing without running
+
+`afterInvariant` gained a check that a claim actually succeeded, and it failed immediately:
+
+```
+no claim ever succeeded, so the settlement invariants proved nothing: 0 <= 0
+```
+
+**I had reported those invariants as passing. They were passing vacuously**, across 8192 calls, with
+`claim` never once executed. Three separate causes, each found by keeping the revert reason instead
+of discarding it:
+
+- `claim` refuses until the window closes, and the handler published windows up to 100_000 blocks
+  long. No sequence could ever settle one.
+- A breach and an order were picked independently, so the order was almost always witnessed against
+  a different commitment than the breach belonged to — `NothingToClaim`.
+- `attributeOrder` is write-once. When the fuzzer reused an order id with a different trader the
+  registry kept the first, while the harness recorded the latest, and claimed as the wrong address —
+  `NotTheOrderOwner`, which is the contract being right.
+
+Shortening windows then made the run **seed-dependent**: a uniformly random uint64 sample block is
+outside every window, so breaches stopped being recorded and the suite passed under one seed and
+failed under the next. Samples are aimed inside the window now, with one in eight outside to keep
+`WINDOW_CLOSED` exercised. Verified across four seeds: 75 passed, 0 failed.
+
+A flaky invariant is worse than a missing one, because it teaches you to rerun.

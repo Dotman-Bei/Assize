@@ -1,85 +1,91 @@
 # A claim fails after a bond is partly withdrawn
 
-## This cannot happen, and that is the whole page
+**This page used to say the scenario could not happen.** That was true while settlement was cut
+under K10: the deployed registry had no `CALL` opcode anywhere in its runtime, so no sequence of
+transactions could move ether out of it. P3 shipped settlement (DECISIONS.md D-047), a bond has been
+paid out, and the scenario is now reachable. This is a real runbook.
 
-PRD §15 names it because a protocol that pays out has to answer it. **This one does not
-pay out.** The settlement path was cut under PRD §26 K10 when the submission window got
-short (DECISIONS.md D-021), and it was cut rather than stubbed.
+## What partial withdrawal means here
 
-`AssizeRegistry` has no `claim`, no `settle`, no `withdraw`, and no admin path to move a
-bond. It holds one `payable` function — `publishCommitment`, which takes the bond in — and
-no code anywhere that sends value out. A partial withdrawal is not a state this contract
-can be in, so there is no procedure to follow, and writing one would be pretending
-otherwise.
+A bond is paid **pro-rata**, `bond × yourVolume ÷ witnessedVolume`, and several traders can claim
+separately. So a bond is routinely part-paid: one claimant takes their share, the rest stays in the
+registry waiting for the others. That state is normal, not an incident.
 
-Check it rather than believing it:
+The incident is a claim that **should** succeed and does not, while the bond is already part spent.
 
-```bash
-# Ask the deployed bytecode directly whether it dispatches on any of these.
-CODE=$(cast code "$REGISTRY" --rpc-url "$RPC")
-for sig in "claim(uint256)" "settle(uint256)" "withdraw()" "withdraw(uint256)" \
-           "publishCommitment(bytes32,uint128,uint128,uint64,uint64)"; do
-  SEL=$(cast sig "$sig" | sed 's/^0x//')
-  echo "$CODE" | grep -qi "$SEL" && echo "PRESENT $sig" || echo "absent  $sig"
-done
-```
-
-```
-absent  claim(uint256)
-absent  settle(uint256)
-absent  withdraw()
-absent  withdraw(uint256)
-PRESENT publishCommitment(bytes32,uint128,uint128,uint64,uint64)
-```
-
-The last line is the point of including it: it is the positive control. Without a selector
-the scan *does* find, four "absent" results would be equally consistent with a scan that
-cannot find anything. Never publish an absence test without one.
-
-The suite asserts it as a property, over 8,192 random calls across 64 runs:
-
-```
-forge test --match-contract BondConservation
-  invariant_no_ether_ever_leaves     "ether left the registry, which has no path to send any"
-  invariant_every_bond_is_still_held
-```
-
-And the gate reports it as cut rather than passed, which is the behaviour PRD §26 requires
-of a blocked capability:
+## Confirm the state before touching anything
 
 ```bash
-pnpm verify:testnet -- C-005
-# C-005: CUT. Not passing, by design.   (exit 1)
+REC=$(ls deployments/*.json | head -1)
+REGISTRY=$(node -p "JSON.parse(require('fs').readFileSync('$REC')).contracts.AssizeRegistry")
+RPC=$SOMNIA_RPC_URL
+
+cast call "$REGISTRY" "commitmentAt(uint256)" 0 --rpc-url "$RPC"      # bond, and whether forfeited
+cast call "$REGISTRY" "paidOut(uint256)(uint256)" 0 --rpc-url "$RPC"
+cast call "$REGISTRY" "witnessedVolume(uint256)(uint256)" 0 --rpc-url "$RPC"
+cast balance "$REGISTRY" --rpc-url "$RPC"
 ```
 
-## What a bonded breach does instead
+`bond - paidOut` is what remains claimable for that commitment. The registry's balance covers every
+commitment at once, so it is not the same number and should never be compared to one bond.
 
-A forfeit is **recorded**, not paid. `forfeitedAtBreachIdPlusOne` is written on the first
-breach in a window and `BondForfeited` is emitted. The bond stays in the contract. Later
-breaches are still recorded — each is evidence a verifier can re-derive — but a second
-bond does not forfeit.
+## Why a claim reverts, and what each one means
 
-So the honest sentence, which belongs in the demo and in any description of this system:
-**a bond was forfeited, and nobody was paid.** Both halves are true and the second half is
-not a caveat, it is the state of the code.
+Ask before spending gas. Every one of these is a `cast call` away:
 
-## If settlement is ever built
+```bash
+cast call "$REGISTRY" "claimableFor(uint256,uint128[])(uint256,uint256)" <breachId> "[<orderId>]" --rpc-url "$RPC"
+```
 
-It is P3, and this page becomes real work rather than a statement. The failure §15 is
-pointing at is a claim that reverts after value has already left — a bond partly paid out,
-a claimant partly satisfied, and storage disagreeing with the balance. The things to get
-right, recorded now while the shape is still free:
+| Revert | Meaning | What to do |
+|---|---|---|
+| `WindowStillOpen` | the window has not closed | wait. The share's denominator is still moving, and this is the guard that stops an early claimant being overpaid |
+| `NotTheOrderOwner` | `orderOwner[orderId]` is not the caller | the claimant named an order they did not place, or the order was never attributed. Check `orderOwner` |
+| `OrderAlreadySettled` | that order already paid | not a fault. Claim the orders that have not |
+| `NothingToClaim` | zero volume, or a share that truncates to zero | the order never filled inside the window, or the share rounds below one wei |
+| `NoWitnessedVolume` | nothing filled in the window at all | nobody is owed anything. The bond stays |
+| `BondNotForfeited` | the commitment held | correct refusal |
+| `PayoutExceedsBond` | **should be unreachable** | see below |
 
-- **Settle in one transaction or none.** A withdrawal split across calls is the state this
-  page exists to prevent, and it is prevented by design, not by a runbook.
-- **Effects before interactions.** Mark the bond spent before sending, so a reverting
-  recipient cannot re-enter a bond that storage still shows as available.
-- **A failed send must revert the accounting**, never be swallowed. AGENTS.md forbids the
-  empty `catch {}` that would hide it.
-- **Keep `invariant_no_ether_ever_leaves`** by replacing it with the invariant that
-  succeeds it: the registry's balance equals bonds held plus payouts owed, at every step.
-  The invariant should change shape, not be deleted, and a deleted invariant is the thing
-  AGENTS.md names as never acceptable to make a suite pass.
+## The one that is an incident
 
-Until then, PRD §21 governs: the claim flow does not exist, so nothing may be said about
-it in any tense but this one.
+`PayoutExceedsBond` means the shares summed past the bond. With the window closed the denominator
+is fixed and they cannot, so this firing means an assumption has broken.
+
+Do not work around it and do not raise the bound. Capture the state and record it:
+
+```bash
+cast call "$REGISTRY" "witnessedVolume(uint256)(uint256)" <commitmentId> --rpc-url "$RPC"
+cast call "$REGISTRY" "paidOut(uint256)(uint256)" <commitmentId> --rpc-url "$RPC"
+cast call "$REGISTRY" "fillVolumeOf(uint256,uint128)(uint256)" <commitmentId> <orderId> --rpc-url "$RPC"
+```
+
+Sum `fillVolumeOf` over every order that was witnessed. It must equal `witnessedVolume`. If it does
+not, `witnessFill` accepted something it should not have, and that is the bug — not the bound that
+caught it.
+
+This is the guard that already earned its place once. The invariant run found the unbounded version
+paying **12420 against a bond of 6214** before any of it was deployed, because the denominator grew
+while the window was open.
+
+## A failed send
+
+`claim` reverts the whole transaction if the transfer fails, deliberately. A swallowed failure would
+mark the orders settled while paying nothing, which is the one outcome a claimant cannot recover
+from — so a reverted claim leaves the orders unsettled and claimable again.
+
+The usual cause is a contract claimant whose `receive` reverts or runs out of gas. Claim to an EOA,
+or fix the recipient.
+
+## Do not
+
+Do not add an admin path to move a stuck bond. The registry has exactly one function that sends
+ether and it pays a witnessed trader; an owner override would make every bond discretionary, and the
+bond is the only thing making a commitment cost anything.
+
+Do not attribute an order by hand to make a claim work. `attributeOrder` is restricted to the
+sampler and is write-once precisely so that a claim is never taken on anyone's word. An operator who
+can name themselves the owner of another trader's order can take that trader's share.
+
+Do not treat a part-paid bond as an incident. It is what pro-rata settlement looks like while the
+other claimants have not come.

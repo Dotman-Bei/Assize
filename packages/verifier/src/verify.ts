@@ -36,6 +36,14 @@ export const registryAbi = [
       { name: "maxSpread", type: "uint128" }, { name: "minSize", type: "uint128" },
       { name: "start", type: "uint64" }, { name: "end", type: "uint64" },
       { name: "bond", type: "uint256" }, { name: "forfeitedAtBreachIdPlusOne", type: "uint256" }] }] },
+  // PRD §27 Phase P3. A verifier has to be able to re-derive a payout from
+  // storage, not just a verdict: the share is `bond * fillVolumeOf / witnessedVolume`
+  // and every term in that is readable here.
+  { type: "function", name: "witnessedVolume", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "paidOut", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "orderOwner", stateMutability: "view", inputs: [{ type: "uint128" }], outputs: [{ type: "address" }] },
+  { type: "function", name: "fillVolumeOf", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "uint128" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "orderSettled", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "uint128" }], outputs: [{ type: "bool" }] },
   // Deliberately not `as const`: every read goes through one generic helper, and
   // literal-narrowed types would force a cast at each call site instead of one here.
 ] satisfies Abi;

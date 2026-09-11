@@ -2,24 +2,83 @@
   "$comment": [
     "The deployment record. PRD §17 keeps addresses out of apps/ and packages/;",
     "they live here and in DEPLOYMENT.md, and are read at runtime from the",
-    "environment. This file is the record, not a source of compiled-in constants."
+    "environment. This file is the record, not a source of compiled-in constants.",
+    "",
+    "The live deployment is the P3 one below. The P1/P2 deployment it supersedes",
+    "is kept under `supersededDeployment` because its 29,541-sample run is still",
+    "the evidence behind several claims, and deleting the addresses would make",
+    "that run unverifiable. Both are on chain; only one is current."
   ],
   "network": "somnia-shannon-testnet",
   "chainId": 50312,
   "rpcUrl": "https://dream-rpc.somnia.network",
-  "deployedAt": "2026-09-10",
+  "deployedAt": "2026-09-11",
+  "phase": "P3",
   "contracts": {
-    "AssizeRegistry": "0xa43d71fff5ecedc577a0623421a16c2d11dc6b61",
-    "CoverageSubscriber": "0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0"
+    "AssizeRegistry": "0x829465c447eD558b108001d472B5190424DCBfCc",
+    "CoverageSubscriber": "0x6aFa0c42ed5462aDdEd9739B0D8b54b0a78Dddc2"
   },
   "accounts": {
     "deployer": "0xF3F0C3fB033e97F6f09BAe7F52329a8825167054",
     "maker": "0x62Ec9c9410c1b59647749D4d3005c75b9F380F38",
-    "$note": "Two accounts by design — DECISIONS.md D-019."
+    "$note": "Two accounts by design — DECISIONS.md D-019. In the P3 run the deployer was also the witnessed trader."
   },
   "measurement": {
     "dreamdexPool": "0x279Ff833DD608B3fFdBB7cA679A43D173Ee14c1A",
     "marketId": "0x0000000000000000000000000000000000000000000000000000000000018bb8",
+    "collateralToken": "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E",
+    "subscriptionId": "18103719",
+    "handlerGasLimit": 6087380,
+    "handlerGasMeasuredLive": 3043690,
+    "commitment": {
+      "id": 0,
+      "maxSpreadRaw": 15000,
+      "minSize": 10000000,
+      "startBlock": 485293207,
+      "endBlock": 485302207,
+      "bondWei": "1000000000000000000",
+      "forfeited": true
+    },
+    "$note": [
+      "The breach here was not staged. The live third-party book sat at a spread",
+      "of roughly 22000 against a committed maximum of 15000 for the whole",
+      "window, so the commitment was simply wrong about the book it described.",
+      "The maker never had to withdraw anything."
+    ]
+  },
+  "settlement": {
+    "witnessedTrader": "0xF3F0C3fB033e97F6f09BAe7F52329a8825167054",
+    "takerOrderId": "368934881474191136278",
+    "witnessedVolume": "5000000",
+    "fillTx": "0xc507f85b170a8646ae613e0675e055193117aee43ae7400d8c11d240ac60a11a",
+    "claimTx": "0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25",
+    "paidOutWei": "1000000000000000000",
+    "$note": [
+      "A witness is the join of two pool logs: OrderPlaced carries the owner but",
+      "no fill, OrderFilled carries the quantity but no address. The subscriber",
+      "forwarded both halves and the registry joined them on order id at claim",
+      "time. The sole witness took the whole bond, pro-rata over a witnessed",
+      "volume of 5000000."
+    ]
+  },
+  "evidence": {
+    "callbackTx": "0x01e5bcb9f3e9df3cf6b30bcbc8e1fc63772b08707f95b85ae5ed4fcb855ad573",
+    "$note": "A reactive transaction: from and to are both the subscriber, and the nonce is the block-unique reactivity nonce."
+  },
+  "supersededDeployment": {
+    "$comment": [
+      "The P1/P2 deployment. Still on chain and still verifiable; its run is the",
+      "evidence for the 29,541-sample measurement. Superseded because both the",
+      "registry's subscriber and the subscriber's commitment are immutable, so",
+      "adding settlement meant deploying the pair again (DECISIONS.md D-047).",
+      "Its subscriber is also permanently wedged — see D-044."
+    ],
+    "phase": "P2",
+    "deployedAt": "2026-09-10",
+    "contracts": {
+      "AssizeRegistry": "0xa43d71fff5ecedc577a0623421a16c2d11dc6b61",
+      "CoverageSubscriber": "0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0"
+    },
     "subscriptionId": "17611580",
     "handlerGasLimit": 6000000,
     "handlerGasMeasuredLive": 2730154,
@@ -31,10 +90,19 @@
       "endBlock": 484837694,
       "bondWei": "1000000000000000000",
       "forfeited": true
+    },
+    "run": {
+      "blocks": "484439389 to 484519171",
+      "samples": 29541,
+      "distinctBlocks": 1899,
+      "breaches": 29431,
+      "spreadBreach": 29227,
+      "depthBreach": 204,
+      "coveredAtSample": 110,
+      "costPerSampleStt": "0.001286"
+    },
+    "evidence": {
+      "callbackTx": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf"
     }
-  },
-  "evidence": {
-    "callbackTx": "0x98023141362bab2255dbf6f73342912b3929facfff7091129edcdd7e88de3adf",
-    "$note": "A reactive transaction: from and to are both the subscriber, and the nonce is the block-unique reactivity nonce."
   }
 }

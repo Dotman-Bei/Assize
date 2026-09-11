@@ -111,12 +111,42 @@ stage_deploy() {
   [ "$(cast call "$reg" 'subscriber()(address)' --rpc-url "$R")" = "$sub" ] || die "registry points elsewhere"
   ok "subscriber deployed and wired"
 
-  # 4. Prefund. The balance floor is gasLimit x price at EVERY firing, not gas
-  #    used — fall below it and the chain removes the subscription (D-020).
-  cast send --private-key "$DEPLOYER_PRIVATE_KEY" --rpc-url "$R" --value 20ether "$sub" >/dev/null
-  ok "subscriber funded with $(cast from-wei "$(cast balance "$sub" --rpc-url "$R")") STT"
+  # Record the addresses NOW. The first run of this script lost them when a
+  # later step failed, and a deployed contract whose address is only in a
+  # terminal scrollback is a contract you can lose.
+  { echo "REG=$reg"; echo "SUB=$sub"; echo "START=$start"; echo "END=$end"; } > "$STATE"
+  ok "addresses written to $STATE"
 
-  # 5. Size gasLimit from the REAL pool, never a fixture (D-022).
+  fund_and_subscribe "$reg" "$sub"
+
+  say "stage 1 done. Window opens at $start."
+  echo "  Next:  ./scripts/p3-live-run.sh trade"
+}
+
+# Fund the subscriber to the library's own floor and subscribe. Separate from
+# the deploy so a failure here can be retried without redeploying anything.
+fund_and_subscribe() {
+  local reg=$1 sub=$2
+
+  # SUBSCRIPTION_OWNER_MINIMUM_BALANCE is 32 ether in the pinned library, and it
+  # is checked at subscribe time. The first run funded 20 and was refused with
+  # InsufficientBalance (0xf4d678b8). Read the floor from the package rather
+  # than writing a number here, so it cannot drift from what the code enforces.
+  local floor held need
+  floor=$(grep -oE 'SUBSCRIPTION_OWNER_MINIMUM_BALANCE = [0-9]+ ether' \
+            node_modules/@somnia-chain/reactivity-contracts/contracts/interfaces/SomniaExtensions.sol \
+            | grep -oE '[0-9]+' | head -1)
+  [ -n "$floor" ] || die "could not read SUBSCRIPTION_OWNER_MINIMUM_BALANCE from the pinned package"
+  held=$(cast balance "$sub" --rpc-url "$R")
+  need=$(python3 -c "print(max(0, $floor*10**18 + 10**18 - $held))")
+  ok "owner minimum is ${floor} STT; subscriber holds $(cast from-wei "$held")"
+
+  if [ "$need" != "0" ]; then
+    cast send --private-key "$DEPLOYER_PRIVATE_KEY" --rpc-url "$R" --value "$need" "$sub" >/dev/null
+    ok "topped up by $(cast from-wei "$need") STT to $(cast from-wei "$(cast balance "$sub" --rpc-url "$R")")"
+  fi
+
+  # Size gasLimit from the REAL pool, never a fixture (D-022).
   local measured limit
   measured=$(cast estimate "$sub" "onEvent(address,bytes32[],bytes)" "$POOL" "[]" "0x" \
               --from 0x0000000000000000000000000000000000000100 --rpc-url "$R")
@@ -131,7 +161,7 @@ stage_deploy() {
   [ "$subid" != "0" ] || die "subscribe did not take"
   ok "subscription $subid live"
 
-  # 6. Auto-pull needs an allowance: this pool's collateral is tUSDC, not native.
+  # Auto-pull needs an allowance: this pool's collateral is tUSDC, not native.
   for who in MAKER DEPLOYER; do
     local key="${who}_PRIVATE_KEY"
     cast send --private-key "${!key}" --rpc-url "$R" "$TUSDC" \
@@ -139,9 +169,8 @@ stage_deploy() {
   done
   ok "tUSDC approved to the pool by both accounts"
 
-  { echo "REG=$reg"; echo "SUB=$sub"; echo "START=$start"; echo "END=$end"; echo "SUBID=$subid"; } > "$STATE"
-  say "stage 1 done. Window opens at $start."
-  echo "  Next:  ./scripts/p3-live-run.sh trade"
+  { echo "SUBID=$subid"; } >> "$STATE"
+  say "subscription $subid live."
 }
 
 # ----------------------------------------------------------------- trade ----
@@ -152,6 +181,31 @@ stage_trade() {
 
   local expire bidtx asktx bidid askid taketx takeid
   expire=$(( ($(date +%s) + 3600) * 1000000000 ))
+
+  # Prices are derived from the book as it stands RIGHT NOW, not written above.
+  # The first attempt hardcoded 845000/855000 from a reading taken ten minutes
+  # earlier; by the time the window opened the book had moved to 900000/922000,
+  # which put the maker's "ask" below the best bid — a POST_ONLY order that
+  # cannot rest without taking, so it is simply refused. A quote that has to sit
+  # inside a live spread has to be computed against that spread.
+  local bb ba mid half
+  bb=$(cast call "$POOL" "getBookLevels(bool,uint64)((uint256,uint256)[])" true 1 --rpc-url "$R" \
+        | grep -oE '[0-9]+' | head -1)
+  ba=$(cast call "$POOL" "getBookLevels(bool,uint64)((uint256,uint256)[])" false 1 --rpc-url "$R" \
+        | grep -oE '[0-9]+' | head -1)
+  [ -n "$bb" ] && [ -n "$ba" ] || die "could not read the book"
+  [ "$ba" -gt "$bb" ] || die "book is crossed: bid $bb, ask $ba"
+  ok "live book: bid $bb, ask $ba, spread $((ba - bb))"
+
+  # Sit symmetrically inside the spread, tight enough that the envelope holds.
+  mid=$(( (bb + ba) / 2 ))
+  half=5000
+  BID_PX=$(( mid - half ))
+  ASK_PX=$(( mid + half ))
+  [ "$BID_PX" -gt "$bb" ] && [ "$ASK_PX" -lt "$ba" ] \
+    || die "the live spread $((ba - bb)) is too tight to quote inside with a half-spread of $half"
+  [ $(( ASK_PX - BID_PX )) -le "$MAX_SPREAD" ] || die "derived quotes breach our own envelope"
+  ok "quoting bid $BID_PX / ask $ASK_PX (spread $((ASK_PX - BID_PX)), envelope $MAX_SPREAD)"
 
   # Maker rests both sides inside the live spread. POST_ONLY guarantees it never
   # takes, so the maker cannot accidentally become the taker in its own window.
@@ -231,7 +285,11 @@ stage_claim() {
 
 case "${1:-}" in
   deploy) stage_deploy ;;
+  subscribe)
+    . "$STATE"
+    say "P3 — funding and subscribing (resume)"
+    fund_and_subscribe "$REG" "$SUB" ;;
   trade)  stage_trade  ;;
   claim)  stage_claim  ;;
-  *) echo "usage: $0 {deploy|trade|claim}" >&2; exit 2 ;;
+  *) echo "usage: $0 {deploy|subscribe|trade|claim}" >&2; exit 2 ;;
 esac

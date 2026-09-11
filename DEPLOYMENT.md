@@ -5,19 +5,55 @@ Testnet only. No mainnet, no real money, no token (PRD §25).
 
 ## Live contracts
 
+Phase **P3**, deployed 2026-09-11. These carry settlement.
+
 | Contract | Address |
 |---|---|
-| `AssizeRegistry` | `0xa43d71fff5ecedc577a0623421a16c2d11dc6b61` |
-| `CoverageSubscriber` | `0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0` |
+| `AssizeRegistry` | `0x829465c447eD558b108001d472B5190424DCBfCc` |
+| `CoverageSubscriber` | `0x6aFa0c42ed5462aDdEd9739B0D8b54b0a78Dddc2` |
 
 | | |
 |---|---|
 | DreamDEX pool under measurement | `0x279Ff833DD608B3fFdBB7cA679A43D173Ee14c1A` |
 | Market id | `0x0000000000000000000000000000000000000000000000000000000000018bb8` |
-| Reactivity subscription | `17611580` |
-| Commitment | id `0`, window blocks `484437694` to `484837694` |
-| Committed envelope | max spread `15000` raw price units, min size `100000000` |
-| Bond | 1 STT, posted by the maker, **forfeited** |
+| Collateral (tUSDC, 6dp) | `0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E` |
+| Reactivity subscription | `18103719` |
+| Commitment | id `0`, window blocks `485293207` to `485302207` |
+| Committed envelope | max spread `15000` raw price units, min size `10000000` |
+| Bond | 1 STT, posted by the maker, **forfeited and paid out in full** |
+
+### The payout
+
+| | |
+|---|---|
+| Witnessed trader | `0xF3F0C3fB033e97F6f09BAe7F52329a8825167054` |
+| Taker order | `368934881474191136278` |
+| Witnessed volume | `5000000` (5 tUSDC) |
+| Fill transaction | `0xc507f85b170a8646ae613e0675e055193117aee43ae7400d8c11d240ac60a11a` |
+| Claim transaction | `0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25` |
+| Paid out | `1000000000000000000` wei — the whole bond, to the sole witness |
+
+Being witnessed is not a claim anyone makes about themselves. `OrderPlaced` names who placed an
+order and `OrderFilled` names what that order filled; the subscriber forwarded both halves and the
+registry joined them on order id at claim time. `claim` checks every order named against
+`orderOwner` before paying, so an order you did not place reverts rather than being skipped.
+
+**The breach was not staged.** The live third-party book sat around 22000 wide against a committed
+maximum of 15000 for the whole window. The commitment was wrong about the book it described. The
+maker never withdrew anything.
+
+### Superseded: the P1/P2 deployment
+
+| Contract | Address |
+|---|---|
+| `AssizeRegistry` | `0xa43d71fff5ecedc577a0623421a16c2d11dc6b61` |
+| `CoverageSubscriber` | `0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0` |
+
+Still on chain and still verifiable. Its completed run — **29,541 samples across 1,899 distinct
+blocks**, blocks 484439389 to 484519171 — is the evidence behind the coverage measurement, so the
+addresses stay published rather than being deleted. Superseded because the registry's subscriber and
+the subscriber's commitment are both immutable, so adding settlement meant deploying the pair again
+(`DECISIONS.md` D-047). Its subscriber is also permanently wedged (D-044).
 
 ## Accounts
 

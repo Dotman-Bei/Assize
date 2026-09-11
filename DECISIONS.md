@@ -1429,3 +1429,79 @@ alone, which is a failure this project does not get to make casually:
 **The rule this earns.** When measurement stops, the surfaces that present it change tense. The
 data staying true does not keep the page true, because a reader takes the tense as part of the
 claim.
+
+---
+
+## D-047: Settlement shipped, and a forfeited bond reached the trader it failed
+
+**Date:** 2026-09-11, Phase P3
+**Status:** accepted, reversing D-021 and D-046
+
+**What happened.** A bond was forfeited and paid out on Shannon.
+
+```
+registry   0x829465c447eD558b108001d472B5190424DCBfCc
+fill tx    0xc507f85b170a8646ae613e0675e055193117aee43ae7400d8c11d240ac60a11a
+claim tx   0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25
+
+BondClaimed(commitment 0, breach 0, claimant 0xF3F0…7054, volume 5000000, amount 1e18)
+registry balance after: 0
+```
+
+D-021 cut payouts under K10 and D-046 chose not to redeploy. The owner reversed both, and the work
+is P3 as PRD §27 scopes it: settlement, witnessed volume, and the claim flow.
+
+**What "witnessed" had to mean.** PRD §23 beat 4 pays "a witnessed trader", and whether that is
+honest depends entirely on whether the chain can know who traded. It can, but not from one log.
+`OrderFilled` carries `takerOrderId` and `quantityFilled` and no address; `OrderPlaced` carries
+`orderId` and `owner` and no fill. Neither alone identifies a trader who traded. The subscriber
+forwards both halves as they arrive and the registry joins them on order id at claim time, because
+they are separate callbacks in an order nothing here controls and a join on arrival would drop
+whichever came first.
+
+**The bug the invariant found, before any of this was deployed.**
+
+```
+more was paid out than the forfeited bonds could cover: 12420 > 6214
+```
+
+A share is `bond * yourVolume / witnessedVolume`, and the denominator grows while the window is
+open. With a bond of 1000 and one order of volume 100, the first claim took the whole 1000; a later
+fill then doubled the denominator and the next claim took 500 more. Nobody can know their share
+until the last fill is in, so nobody may be paid until the window closes. That is now a requirement
+in `claim`, with a remaining-bond bound behind it.
+
+**Three things the live run corrected that no test could have.**
+
+- `placeOrder` reverts `UseBinaryPlacement` on this pool. Binary markets take `placeBinaryOrder`,
+  with a different signature and a different argument order.
+- The maker cannot rest an ask: `SELL_YES` reverts `InsufficientPermission` without YES inventory.
+- None of that mattered, because **the witness does not have to fill against our own maker.** A
+  witnessed trader is anyone who took liquidity inside the window. The deployer crossing a third
+  party's resting ask is exactly as real, and arguably more so — it is genuine market liquidity
+  rather than our own quote on both sides.
+
+**The breach was not staged.** The live third-party book sat around 22000 wide against a committed
+maximum of 15000 for the whole window. The commitment was simply wrong about the book it described,
+which is the thing the protocol exists to detect. The maker never withdrew anything.
+
+**What this falsified, and had to be rewritten in the same change.** A working payout makes several
+true sentences false, and they were load-bearing:
+
+- `apps/web` told every visitor "no trader is paid, because the code that would pay them is not in
+  this deployment", and its lifecycle diagram greyed settlement out as not deployed.
+- `submission.json` declared that beat 4 would say **nobody was paid**, and
+  `pnpm submission:check` *required* that wording. A gate demanding a false statement is worse than
+  no gate, so it now requires the limitation §23 actually names: a payout reaches traders the chain
+  saw filling, and nobody else.
+- `pnpm verify:testnet -- C-005` reported CUT by design. It now reads `paidOut`, `witnessedVolume`
+  and the bond from chain and checks the payout against them.
+- C-005 moves **R0 → R2**.
+
+**What is still not claimed.** One witnessed trader, so the pro-rata split was never exercised
+against competing claimants on chain — that is covered by tests and the invariant run, not by this
+transaction. The trader is our own account. This is a working payout, not adoption.
+
+**Cost.** A second redeploy, ~21 STT, and the P1/P2 addresses superseded. The old deployment stays on
+chain and its 29,541-sample run stays verifiable; the record keeps it under `supersededDeployment`
+rather than deleting addresses that other claims still rest on.

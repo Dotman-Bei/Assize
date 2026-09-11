@@ -12,8 +12,10 @@ PRD §15 names five ways this system fails in operation. Each has a page here.
 
 Four of the five have happened here, and those pages are written from the incident
 rather than from imagination — each cites the `DECISIONS.md` entry it came from and the
-readings taken at the time. The fifth cannot happen, because the code it needs does not
-exist, and its page says so instead of rehearsing a procedure for absent code.
+readings taken at the time. The fifth has not happened, but it became reachable when
+settlement shipped in P3 (D-047): its page said the scenario was impossible while the
+registry had no way to send ether at all, and was rewritten as a real runbook once a bond
+was actually paid out.
 
 ## What every one of these has in common
 

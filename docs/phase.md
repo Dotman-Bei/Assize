@@ -74,8 +74,8 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
    address, and a clean working tree. The address check is the one that earns its place — it is what
    catches a redeploy that left the published addresses pointing at a dead contract.
 
-   *Owner-held, and outstanding:* a live public URL for the app, the demo video, the words beat 4
-   uses to say that nobody was paid, and filing `FEEDBACK.md` with the organisers. These are
+   *Owner-held, and outstanding:* the demo video, the words beat 4 uses to scope who a payout can
+   reach, and filing `FEEDBACK.md` with the organisers. These are
    declared in `submission.json`, and no declaration is taken at its word — a URL written there is
    fetched, and a repository said to be public is asked, unauthenticated, whether it is.
 
@@ -93,7 +93,14 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
    that is not there. Every command in every page was executed against the live chain before being
    published — which is how two of them were found to be wrong and fixed.
 
-Not attempted, and not to be claimed: G5 (payout) and G6 (a sustained 24h campaign).
+Not attempted, and not to be claimed: G6 (a sustained 24h campaign).
+
+**G5 passes.** Settlement shipped in P3 and a forfeited bond was paid in full to the trader the
+chain saw filling inside the window — claim tx
+`0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25`, verified by
+`pnpm verify:testnet -- C-005`. D-047 reverses D-021 and D-046, and records what the live run
+corrected that no test could have. C-005 moves R0 to R2. One witnessed trader, so the pro-rata split
+is still covered by tests rather than by a transaction with competing claimants.
 
 ## The measurement run is closed
 

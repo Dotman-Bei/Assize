@@ -88,14 +88,34 @@ async function main(): Promise<void> {
     },
 
     /** A forfeited bond was paid to witnessed traders. */
-    "C-005": async () => ({
-      state: "cut",
-      lines: [
-        "The payout path was cut under PRD §26 K10 when the submission window got short (DECISIONS.md D-021).",
-        "AssizeRegistry has no settlement function, so no payout can have happened and none is claimed.",
-        "C-005 stays at R0. This gate does not pass and must not be reported as passing.",
-      ],
-    }),
+    "C-005": async () => {
+      // This reported CUT until 2026-09-11, and reported it correctly: settlement
+      // was cut under PRD §26 K10 (D-021), and the deployed registry had no way
+      // to send ether at all — no CALL opcode anywhere in its runtime. P3 shipped
+      // it (D-047), so the gate now asks against chain the question it was meant
+      // to ask from the start.
+      const lines: string[] = [];
+      const paid = await read<bigint>("paidOut", [0n]);
+      const volume = await read<bigint>("witnessedVolume", [0n]);
+      const commitment = await read<{ bond: bigint; forfeitedAtBreachIdPlusOne: bigint }>(
+        "commitmentAt",
+        [0n],
+      );
+      const forfeited = commitment.forfeitedAtBreachIdPlusOne > 0n;
+
+      lines.push(`commitment 0 bond ${commitment.bond} wei, forfeited: ${forfeited}`);
+      lines.push(`witnessed volume ${volume}, paid out ${paid} wei`);
+
+      if (!forfeited) return { state: "fail", lines: [...lines, "no bond forfeited, so no payout is due"] };
+      if (volume === 0n) return { state: "fail", lines: [...lines, "no witnessed volume, so nobody could be paid"] };
+      if (paid === 0n) return { state: "fail", lines: [...lines, "the bond forfeited and nothing was paid out"] };
+      if (paid > commitment.bond) {
+        return { state: "fail", lines: [...lines, `paid ${paid} against a bond of ${commitment.bond}`] };
+      }
+      lines.push("a payout reached a trader the chain saw filling inside the window, and never exceeded the bond");
+      lines.push("One witnessed trader, so the pro-rata split was not exercised against competing claimants here.");
+      return { state: "pass", lines };
+    },
 
     /** Gaps are recorded as NOT_SAMPLED and never counted as coverage. */
     "C-006": async () => {

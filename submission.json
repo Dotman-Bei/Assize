@@ -13,11 +13,12 @@
   "feedbackFiledAt": null,
   "demo": {
     "$comment": [
-      "PRD \u00a723 beat 4 ends with a witnessed trader claiming the bond. That path was",
-      "cut under \u00a726 K10 (DECISIONS.md D-021) and AssizeRegistry has no settlement",
-      "function, so the beat cannot be performed as written. The video must say so",
-      "out loud. Declare the words used, and the gate checks they are present."
+      "PRD \u00a723 beat 4 ends with a witnessed trader claiming the bond. That is now",
+      "exactly what happened (DECISIONS.md D-047), so the beat is performable as",
+      "written. What the video must still say out loud is the limitation \u00a723 names",
+      "with it: a payout reaches traders the chain saw trading inside the window,",
+      "and nobody else. Declare the words used; the gate checks they are present."
     ],
-    "beat4NobodyWasPaidStatement": "Nobody was paid. No bond was paid out to anyone, and none could have been: the payout path was cut under this project's own kill criteria, and the deployed registry has no settlement function at all. A forfeit here is recorded, not distributed."
+    "beat4LimitationStatement": "A witnessed trader claimed the whole bond, and the transaction is on chain. But a payout only ever reaches traders the registry saw filling inside the window \u2014 it learns that from the pool's own logs. If you held the position and lost money without trading in that window, this pays you nothing."
   }
 }

@@ -104,10 +104,18 @@
     {
       "id": "C-005",
       "claim": "A forfeited bond was paid to witnessed traders, pro rata, on chain.",
-      "rung": "R0",
+      "rung": "R2",
       "target_rung": "R2",
       "gate": "G5",
-      "evidence": [],
+      "evidence": [
+        {
+          "rung": "R2",
+          "description": "A forfeited bond was claimed in full by the trader the chain saw filling inside the window, on the P3 registry (see DEPLOYMENT.md). Witness is the join of two pool logs: OrderPlaced names who placed taker order 368934881474191136278, OrderFilled names the 5000000 that order filled. Both were recorded by the reactivity precompile and joined on chain at claim time, so the claim was never taken on the caller's word. The claim emitted BondClaimed(commitment 0, breach 0, claimant the deployer account, volume 5000000, amount 1000000000000000000) and left the registry holding nothing. One witnessed trader, so the pro-rata split was not exercised against competing claimants on chain; the split is covered by tests and the invariant run, not by this transaction. The trader is our own account, so this is a working payout and not adoption.",
+          "txHash": "0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25",
+          "command": "pnpm verify:testnet -- C-005",
+          "recordedAt": "2026-09-11"
+        }
+      ],
       "verified_by": "pnpm verify:testnet -- C-005"
     },
     {
