@@ -32,6 +32,17 @@ const abi = [
       { name: "maxSpread", type: "uint128" }, { name: "minSize", type: "uint128" },
       { name: "start", type: "uint64" }, { name: "end", type: "uint64" },
       { name: "bond", type: "uint256" }, { name: "forfeitedAtBreachIdPlusOne", type: "uint256" }] }] },
+  { type: "function", name: "witnessedVolume", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "paidOut", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "fillVolumeOf", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "uint128" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "orderSettled", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "uint128" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "claimableFor", stateMutability: "view",
+    inputs: [{ type: "uint256" }, { type: "uint128[]" }],
+    outputs: [{ name: "volume", type: "uint256" }, { name: "amount", type: "uint256" }] },
+  { type: "function", name: "claim", stateMutability: "nonpayable",
+    inputs: [{ type: "uint256" }, { type: "uint128[]" }], outputs: [{ type: "uint256" }] },
+  { type: "event", name: "OrderAttributed",
+    inputs: [{ name: "orderId", type: "uint128", indexed: true }, { name: "owner", type: "address", indexed: true }] },
   { type: "function", name: "activeCommitmentOf", stateMutability: "view",
     inputs: [{ type: "address" }, { type: "bytes32" }],
     outputs: [{ name: "found", type: "bool" }, { name: "commitmentId", type: "uint256" }] },
@@ -152,6 +163,16 @@ function wire() {
     if (c) { await navigator.clipboard.writeText(c.dataset.copy); const t = c.textContent; c.textContent = "copied"; setTimeout(() => { c.textContent = t; }, 1200); return; }
     const chip = e.target.closest(".chip");
     if (chip) { S.filter = chip.dataset.f; $$(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === chip))); renderMarkets(); return; }
+    const marketRow = e.target.closest("tr[data-market]");
+    if (marketRow) {
+      const c = S.commitments.find((x) => String(x.id) === marketRow.dataset.market);
+      if (c) {
+        renderMarketDetail(c);
+        $$("tr[data-market]").forEach((r) => r.classList.toggle("sel", r === marketRow));
+        document.querySelector("#marketDetail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      return;
+    }
     const step = e.target.closest(".stepcard");
     if (step) { S.step = Number(step.dataset.step); renderLifecycle(); return; }
     if (e.target.closest(".drawer-scrim") || e.target.closest("[data-close]")) { $("#overlay").innerHTML = ""; }
@@ -175,7 +196,15 @@ function route() {
   $("#wallet").classList.toggle("hidden", target === "/");
   window.scrollTo({ top: 0 });
   if (target === "/publish") renderPublish();
-  if (target === "/claim") renderClaim();
+  // renderClaim reads the chain, so it can reject. Caught here rather than left
+  // as a floating promise: an unhandled rejection would take the page's error
+  // reporting with it and leave the panel showing whatever it showed before.
+  if (target === "/claim") {
+    renderClaim().catch((error) => {
+      $("#claimBody").innerHTML = `<div class="note rose"><strong>Could not read settlement.</strong>
+        ${esc(error.shortMessage ?? error.message)}</div>`;
+    });
+  }
 }
 
 /**
@@ -358,16 +387,20 @@ function renderMarkets() {
   }
   $("#marketRows").innerHTML = rows.map((c) => {
     const remaining = S.head && c.end > S.head ? c.end - S.head : 0n;
-    return `<tr class="row" data-nav="/markets">
+    // `data-market` rather than `data-nav="/markets"`. The row used to navigate
+    // to the page it was already on, so "Details" did nothing at all: no error,
+    // no movement, nothing. A user reported it before any gate did.
+    const ours = c.maker.toLowerCase() === (S.cfg.accounts?.maker ?? "").toLowerCase();
+    return `<tr class="row" data-market="${c.id}">
       <td class="n">${cut(c.marketId, 10, 6)}<div class="muted" style="font-size:11px">DreamDEX event contract</div></td>
-      <td class="n">${cut(c.maker)}<div class="muted" style="font-size:11px">PROJECT_BASELINE</div></td>
+      <td class="n">${cut(c.maker)}<div class="muted" style="font-size:11px">${ours ? "PROJECT_BASELINE" : "third party"}</div></td>
       <td class="n">${num(c.maxSpread)} <span class="muted">(${bps(c.maxSpread, S.one)} bps)</span></td>
       <td class="n">${num(c.minSize)}</td>
       <td class="n">${formatEther(c.bond)} STT</td>
       <td>${c.last ? pill(c.last.state) : pill("NOT_SAMPLED")}</td>
       <td>${c.last ? src(sampleSourceFromCode(Number(c.last.sample.source))) : "<span class='muted'>n/a</span>"}</td>
       <td class="n">${remaining > 0n ? `${num(remaining)} blocks` : "<span class='muted'>closed</span>"}</td>
-      <td><span class="muted">Details →</span></td></tr>`;
+      <td><span class="navlink">Details →</span></td></tr>`;
   }).join("");
 }
 
@@ -753,30 +786,169 @@ function publishError(error) {
 }
 
 /* ── Page 5: trader settlement portal ─────────────────────────────────────── */
-function renderClaim() {
-  $("#claimBody").innerHTML = `
-    <div class="note"><strong>This portal pays only addresses the chain saw trading.</strong>
-      <code>claim(breachId, orderIds)</code> checks every order you name against
-      <code>orderOwner</code>, which the registry learned from the pool's own <code>OrderPlaced</code>
-      log — so a claim is never taken on your word. Your share is
-      <code>bond × yourVolume ÷ witnessedVolume</code>, and it can only be taken once the window has
-      closed, because until then the denominator is still moving.</div>
+/**
+ * The settlement portal. PRD §23 beat 4, §27 Phase P3.
+ *
+ * Every figure below was hardcoded until 2026-09-11 — "the registry witnesses no
+ * fills in this deployment", a permanently disabled button, and a note saying
+ * settlement "is not deployed here". All true while the payout path was cut, all
+ * false once P3 shipped (D-047), and all still on screen because copy does not
+ * change itself when the contract underneath it does.
+ *
+ * It reads the chain now. A wallet is owed something or it is not, and either way
+ * the number comes from the registry rather than from this file.
+ */
+async function renderClaim() {
+  const body = $("#claimBody");
+  const paid = await S.client.readContract({ address: S.registry, abi, functionName: "paidOut", args: [0n] })
+    .catch(() => 0n);
+  const volume = await S.client.readContract({ address: S.registry, abi, functionName: "witnessedVolume", args: [0n] })
+    .catch(() => 0n);
+
+  const intro = `<div class="note"><strong>This portal pays only addresses the chain saw trading.</strong>
+    <code>claim(breachId, orderIds)</code> checks every order you name against <code>orderOwner</code>,
+    which the registry learned from the pool's own <code>OrderPlaced</code> log, so a claim is never
+    taken on your word. Your share is <code>bond × yourVolume ÷ witnessedVolume</code>, and it can only
+    be taken once the window has closed, because until then the denominator is still moving.</div>
     <div class="card" style="margin-top:var(--s-3)">
-      <div class="stat-label">Connected wallet audit</div>
+      <div class="stat-label">Settlement on this registry</div>
       <dl class="kv" style="margin-top:var(--s-3)">
-        <dt>ADDRESS</dt><dd id="claimAddr">${S.account ? S.account : "not connected"}</dd>
-        <dt>WITNESSED FILLS</dt><dd>0 <span class="muted">(the registry witnesses no fills in this deployment)</span></dd>
-        <dt>ATTRIBUTED VOLUME</dt><dd>0.00 STT</dd>
-        <dt>CALCULATED SHARE</dt><dd>0.00%</dd>
+        <dt>WITNESSED VOLUME</dt><dd>${num(volume)}</dd>
+        <dt>PAID OUT</dt><dd>${formatEther(paid)} STT</dd>
       </dl>
-      <div class="note" style="margin-top:var(--s-4)"><span class="pill p-NOT_SAMPLED"><span class="d"></span>NOT_WITNESSED</span>
-        This wallet did not execute trades witnessed by the registry during a breached window. In this
-        deployment no wallet did, because fills are not witnessed at all.</div>
-      <button class="btn btn-white" disabled style="width:100%;justify-content:center;margin-top:var(--s-3)">Claim Payout</button>
-      <p class="h2-sub" style="margin-top:var(--s-3)">Payouts would strictly enforce self-match rejection
-        and per-address distribution caps. Would: the mechanism is designed in
-        <code>PRD.md</code> §5.3 and §12 and is not deployed here.</p>
     </div>`;
+
+  if (!S.account) {
+    body.innerHTML = intro + `<div class="card" style="margin-top:var(--s-3)">
+      <div class="stat-label">Your position</div>
+      <p class="h2-sub" style="margin-top:var(--s-3)">Connect a wallet to check whether the registry
+      witnessed any of your fills. It can only pay an address it saw filling inside a breached
+      window — holding a position is not enough, however much it cost.</p></div>`;
+    return;
+  }
+
+  body.innerHTML = intro + `<div class="card" style="margin-top:var(--s-3)">
+    <div class="stat-label">Your position</div>
+    <p class="h2-sub" style="margin-top:var(--s-3)">Reading <code>OrderAttributed</code> for
+    ${cut(S.account, 6, 4)}…</p></div>`;
+
+  const orders = await ordersOwnedBy(S.account);
+  if (orders.length === 0) {
+    body.innerHTML = intro + `<div class="card" style="margin-top:var(--s-3)">
+      <div class="stat-label">Your position</div>
+      <div class="note" style="margin-top:var(--s-3)"><span class="pill p-NOT_SAMPLED"><span class="d"></span>NOT_WITNESSED</span>
+      The registry attributed no orders to this wallet in the range scanned, so there is nothing to
+      claim. That is the mechanism working, not a failure: it pays traders it saw filling inside a
+      breached window, and nobody else.</div></div>`;
+    return;
+  }
+
+  const rows = await Promise.all(orders.map(async (orderId) => {
+    const [vol, settled] = await Promise.all([
+      S.client.readContract({ address: S.registry, abi, functionName: "fillVolumeOf", args: [0n, orderId] }),
+      S.client.readContract({ address: S.registry, abi, functionName: "orderSettled", args: [0n, orderId] }),
+    ]);
+    return { orderId, vol, settled };
+  }));
+  const open = rows.filter((r) => !r.settled && r.vol > 0n).map((r) => r.orderId);
+  let amount = 0n;
+  if (open.length > 0) {
+    [, amount] = await S.client.readContract({
+      address: S.registry, abi, functionName: "claimableFor", args: [0n, open],
+    }).catch(() => [0n, 0n]);
+  }
+
+  body.innerHTML = intro + `<div class="card" style="margin-top:var(--s-3)">
+    <div class="stat-label">Your position</div>
+    <dl class="kv" style="margin-top:var(--s-3)">
+      <dt>ADDRESS</dt><dd>${S.account}</dd>
+      <dt>ORDERS ATTRIBUTED</dt><dd>${rows.length}</dd>
+      <dt>UNSETTLED VOLUME</dt><dd>${num(rows.filter((r) => !r.settled).reduce((a, r) => a + Number(r.vol), 0))}</dd>
+      <dt>CLAIMABLE</dt><dd>${formatEther(amount)} STT</dd>
+    </dl>
+    <div class="term" style="margin-top:var(--s-3)"><pre>${esc(rows.map((r) =>
+      `order ${r.orderId}  volume ${r.vol}  ${r.settled ? "settled" : "unsettled"}`).join("\n"))}</pre></div>
+    <div id="claimState"></div>
+    <button class="btn btn-white" id="doClaim" ${amount === 0n ? "disabled" : ""}
+      style="width:100%;justify-content:center;margin-top:var(--s-3)">${
+        amount === 0n ? "Nothing To Claim" : `Claim ${formatEther(amount)} STT`}</button>
+  </div>`;
+  if (amount > 0n) $("#doClaim").addEventListener("click", () => doClaim(open));
+}
+
+/**
+ * Order ids the registry attributed to an address.
+ * @dev Somnia caps `eth_getLogs` at 1000 blocks (FEEDBACK.md finding 8), so this
+ * walks back in windows and says how far it looked. A range is stated rather
+ * than implied: "no orders found" means none in what was scanned.
+ */
+async function ordersOwnedBy(account) {
+  const head = await S.client.getBlockNumber();
+  const windows = 40n;
+  const found = [];
+  for (let i = 0n; i < windows; i += 1n) {
+    const to = head - i * 1000n;
+    if (to <= 0n) break;
+    try {
+      const logs = await S.client.getLogs({
+        address: S.registry,
+        event: abi.find((a) => a.type === "event" && a.name === "OrderAttributed"),
+        args: { owner: account },
+        fromBlock: to - 999n, toBlock: to,
+      });
+      for (const log of logs) found.push(log.args.orderId);
+    } catch (error) {
+      // A window the node refuses is reported, not silently treated as empty —
+      // otherwise a scan that failed looks exactly like a wallet owed nothing.
+      console.error(`OrderAttributed scan failed near block ${to}:`, error.shortMessage ?? error.message);
+    }
+  }
+  return [...new Set(found)];
+}
+
+/** Send the claim, and report a refusal in words. */
+async function doClaim(orderIds) {
+  const account = S.account ?? await connect();
+  if (!account) return;
+  try {
+    await S.client.simulateContract({
+      account, address: S.registry, abi, functionName: "claim", args: [0n, orderIds],
+    });
+    const data = encodeFunctionData({ abi, functionName: "claim", args: [0n, orderIds] });
+    const wallet = createWalletClient({ chain: walletChain(), transport: custom(globalThis.ethereum) });
+    const hash = await wallet.sendTransaction({ account, to: S.registry, data });
+    $("#claimState").innerHTML = `<div class="note"><strong>Claimed.</strong>
+      <a class="navlink" href="${S.explorer}/tx/${hash}" target="_blank" rel="noopener">${cut(hash, 12, 8)} →</a></div>`;
+  } catch (error) {
+    $("#claimState").innerHTML = `<div class="note rose"><strong>Not claimed.</strong> ${esc(claimError(error))}</div>`;
+  }
+}
+
+/**
+ * A claim refusal, in words. Same reasoning as {publishError}: the registry
+ * refuses with custom errors and a wallet's gas estimation drops their data, so
+ * simulating first is what makes a reason available at all.
+ */
+function claimError(error) {
+  const named = error?.cause?.data?.errorName ?? error?.data?.errorName;
+  const args = (error?.cause?.data?.args ?? error?.data?.args ?? []).map(String);
+  switch (named) {
+    case "WindowStillOpen":
+      return `The window runs to block ${args[1]} and the chain is at ${args[2]}. Shares cannot be `
+        + `paid until it closes, because until then the volume they divide by is still growing.`;
+    case "NothingToClaim":
+      return "These orders carry no unsettled volume, or the share rounds below one wei.";
+    case "NotTheOrderOwner":
+      return `Order ${args[0]} was placed by ${args[1]}, not by you.`;
+    case "OrderAlreadySettled":
+      return `Order ${args[0]} has already been paid.`;
+    case "BondNotForfeited":
+      return "That commitment's bond was never forfeited, so there is nothing to distribute.";
+    case "NoWitnessedVolume":
+      return "No fills were witnessed in that window, so the bond stays where it is.";
+    default:
+      return error?.shortMessage ?? error?.message ?? String(error);
+  }
 }
 
 /* ── Page 6: verification playground ──────────────────────────────────────── */
@@ -848,7 +1020,9 @@ async function connect() {
   const balance = await S.client.getBalance({ address: account });
   $("#wallet").textContent = `${Number(formatEther(balance)).toFixed(2)} STT · ${cut(account, 4, 3)}`;
   if (!$('[data-page="/publish"]').classList.contains("hidden")) refreshPublish();
-  if (!$('[data-page="/claim"]').classList.contains("hidden")) renderClaim();
+  if (!$('[data-page="/claim"]').classList.contains("hidden")) {
+    renderClaim().catch((error) => { console.error("renderClaim:", error.shortMessage ?? error.message); });
+  }
   return account;
 }
 

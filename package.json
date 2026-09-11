@@ -10,6 +10,7 @@
   },
   "scripts": {
     "assize": "tsx packages/verifier/src/cli.ts",
+    "audit:ui": "node scripts/ui-audit.mjs",
     "build": "pnpm -r --if-present build",
     "check:done": "tsx scripts/done-check.ts",
     "check:live": "node scripts/live-check.mjs",

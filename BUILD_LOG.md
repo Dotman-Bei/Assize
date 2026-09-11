@@ -1499,3 +1499,42 @@ Fixed in two places, because either alone leaves a real hole:
   form for a user whose wallet was fine.
 
 The second fix is the one that mattered: a judge on a flaky RPC would have hit it.
+
+## 2026-09-11 — `pnpm audit:ui`, and four controls that did nothing
+
+Reported from the live app: "the details button, nothing happens on click", and "the claims and
+verifier tabs, nothing works there". Both right, and neither caught by any gate — `check:live` asks
+whether the page reads the chain, and `test:e2e` asks whether six states render. Neither asks whether
+a control does anything when pressed.
+
+`pnpm audit:ui` now clicks every tab, row, chip and button on the deployed app and reports any that
+leaves the page unchanged. A dead control is otherwise indistinguishable from a working one with
+nothing to do: no error, no movement, nothing.
+
+First run, seven findings. One was the audit's own fault — it clicked breach row 0, which is already
+rendered on load, so a working control looked dead. **A negative result from a single case is a
+single case**, the same lesson as the revert-data reading earlier today. It clicks row 1 now.
+
+The rest were real:
+
+- **Market rows carried `data-nav="/markets"`** — clicking "Details" navigated to the page you were
+  already on. `renderMarketDetail` existed and was only ever called with `S.commitments[0]`, so the
+  panel below the table showed the first commitment and no other. Rows carry `data-market` now and
+  open their own.
+- **Every maker was labelled `PROJECT_BASELINE`**, including third parties. That label is our own
+  baseline maker and calling someone else's commitment ours is the opposite of the disclosure it
+  exists for. It is now compared against the record's maker address.
+- **The Claim page was hardcoded**, with a permanently disabled button and four statements the
+  deployment had falsified the day before: "the registry witnesses no fills in this deployment", "no
+  wallet did", "not deployed here", "would strictly enforce". I corrected the panel's top note when
+  P3 shipped and missed the body underneath it.
+
+The Verifier tab turned out to work, and to be the best thing in the app: it reads a stored sample,
+re-derives the verdict with `packages/reference` in the browser, and compares it to the chain. The
+audit ran it and got `PASS. Verdicts match and the pin resolves.`
+
+The Claim page now reads chain — witnessed volume, paid out, and for a connected wallet the orders
+the registry attributed to it, their unsettled volume and what `claimableFor` says they are owed,
+with a button that claims it. A wallet owed nothing is told so in those terms rather than by a
+disabled button with no explanation. The `OrderAttributed` scan states the range it covered, because
+"no orders found" and "the scan failed" must not look alike.
