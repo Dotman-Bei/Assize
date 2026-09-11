@@ -88,7 +88,12 @@ function answer(call, scenario) {
   switch (call.method) {
     case "eth_chainId": return "0xc488";
     case "eth_blockNumber": return "0x1f40";                 // 8000
-    case "eth_getBalance": return "0x1bc16d674ec80000";      // 2 STT
+    // 0.5 STT — under the 1 STT default bond, so the insufficient-balance state
+    // is reachable. It was 2 STT, which only sat below the threshold while the
+    // form demanded bond + a 38 STT prefund it never sent (D-048). When that
+    // requirement dropped to the bond, 2 STT became sufficient and this state
+    // stopped being reachable — which this gate caught on the next run.
+    case "eth_getBalance": return "0x6f05b59d3b20000";       // 0.5 STT
     case "eth_getBlockByNumber": return { number: "0x5dc", hash: PIN, parentHash: PIN, timestamp: "0x0" };
     case "eth_call": return ethCall(call.params?.[0]?.data ?? "0x", scenario);
     default: return null;

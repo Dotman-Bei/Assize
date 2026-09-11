@@ -1406,3 +1406,21 @@ genuinely empty says so rather than presenting an empty box: *"Still reading the
 is queried from chain, never a hardcoded string, so it is empty until that returns."*
 
 `pnpm test:e2e` still passes all six states.
+
+## 2026-09-11 — The publish form asked for 39 STT to spend 1
+
+`doPublish` sends the bond and nothing else, while the Economic Summary added a 38 STT handler
+prefund into `Total Required` and disabled the button below it. A maker holding 38 STT was refused,
+to spend 1.
+
+Faithful to `frontend.md`, which specifies exactly that summary and that disabled state — and
+unimplementable as written, because a maker publishing here gets no handler to prefund. One
+subscriber exists and it is immutably wired to one commitment.
+
+The prefund stays visible as the figure it is, labelled `not collected here`; the last summary row
+now says what the transaction sends. The balance check covers the bond plus fee headroom. D-048
+records the departure, because `frontend.md` is the design authority and this is a departure from it.
+
+`pnpm test:e2e` then failed, correctly: the chain double returned 2 STT, which sat below the old
+39 STT threshold and above the new one, so G10's insufficient-balance state was no longer reachable.
+The fixture returns 0.5 STT now and all six states pass again.

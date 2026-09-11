@@ -533,8 +533,11 @@ function renderPublish() {
       <dl class="kv" style="margin-top:var(--s-3)">
         <dt>COLLATERAL ESCROW</dt><dd id="sumBond">n/a</dd>
         <dt>HANDLER PREFUND</dt><dd id="sumGas">n/a</dd>
-        <dt>TOTAL REQUIRED</dt><dd id="sumTotal">n/a</dd>
+        <dt>THIS TRANSACTION SENDS</dt><dd id="sumTotal">n/a</dd>
       </dl>
+      <div class="hint" style="margin-top:var(--s-2)">The prefund is what running a sampler over this
+      window would cost, at the measured rate. This transaction does not collect it: it sends the
+      bond, and nothing else. See DECISIONS.md D-048.</div>
     </div>
     <div id="publishState"></div>
     <button class="btn btn-white" id="doPublish" style="width:100%;justify-content:center">Post Commitment</button>`;
@@ -545,10 +548,21 @@ function renderPublish() {
 
 async function refreshPublish() {
   const bond = Number($("#fBond").value || 0), gas = Number($("#fGas").value || 0);
-  const total = bond + gas;
+  // frontend.md asks for `Total Required: (bond + prefund)` and disables the
+  // button below it. That is faithful to a design where the maker prefunds their
+  // own handler — and `doPublish` sends the bond and nothing else, because a
+  // commitment published here gets no subscriber to prefund. The registry's
+  // subscriber is immutable and already wired to one commitment.
+  //
+  // So the form demanded 39 STT to spend 1, and would have refused a tester
+  // holding 38. The prefund stays on screen as the figure it is; the balance
+  // check now covers what the transaction actually sends, plus room for fees.
+  // D-048 records the departure.
+  const FEE_HEADROOM = 0.05;
+  const total = bond + FEE_HEADROOM;
   $("#sumBond").textContent = `${bond.toFixed(2)} STT`;
-  $("#sumGas").textContent = `${gas.toFixed(2)} STT`;
-  $("#sumTotal").textContent = `${total.toFixed(2)} STT`;
+  $("#sumGas").textContent = `${gas.toFixed(2)} STT, not collected here`;
+  $("#sumTotal").textContent = `${bond.toFixed(2)} STT bond + fees`;
 
   const spread = BigInt($("#fSpread").value || 0);
   // §3 Page 3: spread cannot be tighter than the venue's minimum tick.
@@ -586,7 +600,7 @@ async function refreshPublish() {
   if (held < total) {
     box.innerHTML = dry + `<div class="note amber"><strong>Insufficient STT.</strong> Testnet tokens must
       be obtained from the Somnia Shannon Faucet or the official Telegram community. You hold
-      ${held.toFixed(2)} STT and need ${total.toFixed(2)} STT.
+      ${held.toFixed(2)} STT and need ${total.toFixed(2)} STT for the bond and its fees.
       <div style="margin-top:var(--s-3);display:flex;gap:var(--s-2);flex-wrap:wrap">
         <a class="btn btn-outline" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Open Shannon Faucet</a>
         <a class="btn btn-ghost" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Join Somnia Telegram Community</a>

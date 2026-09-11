@@ -1505,3 +1505,49 @@ transaction. The trader is our own account. This is a working payout, not adopti
 **Cost.** A second redeploy, ~21 STT, and the P1/P2 addresses superseded. The old deployment stays on
 chain and its 29,541-sample run stays verifiable; the record keeps it under `supersededDeployment`
 rather than deleting addresses that other claims still rest on.
+
+---
+
+## D-048: The publish form stopped requiring money it does not take
+
+**Date:** 2026-09-11, Phase P4
+**Status:** accepted, a deliberate departure from `frontend.md`
+
+**Evidence.** On the live app, the publish form's Economic Summary read:
+
+```
+COLLATERAL ESCROW    1.00 STT
+HANDLER PREFUND     38.00 STT
+TOTAL REQUIRED      39.00 STT
+```
+
+and disabled the submit button below that total. `doPublish` sends
+`value: parseEther($("#fBond").value)` — **the bond, and nothing else.** The 38 STT was never
+collected by any transaction. A user holding 38 STT was refused, to spend 1.
+
+**This was not a stray bug.** `frontend.md` §3 Page 3 specifies it exactly — Field 6 Handler Gas
+Prefund, an Economic Summary reading `Total Required: (X.XX + Y.YY) STT`, and a disabled button
+below it. The page implemented the design faithfully. The document is the design authority for this
+repository and departing from it needs a reason written down, which is what this entry is.
+
+**Why the design cannot be implemented as written.** It describes a maker who prefunds their own
+handler. In this build a maker who publishes a commitment gets no handler: `AssizeRegistry.subscriber`
+is immutable and `CoverageSubscriber.commitmentId` is immutable, so exactly one subscriber exists and
+it is already wired to one commitment (D-017, D-047). There is nothing for a second maker's prefund
+to fund. The three ways out were: leave it and require money nobody takes; keep the field but stop
+gating on it; or send the prefund somewhere, which would fund *our* subscriber to watch somebody
+else's commitment.
+
+**The decision.** The owner chose the second. The prefund stays on screen, because it is a real
+figure and a maker running a sampler would pay it — it is now labelled `38.00 STT, not collected
+here`, and the summary's last row says what the transaction sends rather than what the user must
+hold. The balance check covers the bond plus 0.05 STT of fee headroom.
+
+**What it changed downstream.** `pnpm test:e2e` failed on the next run: its chain double returned a
+2 STT balance, which was below the old 39 STT threshold and above the new one, so G10's
+insufficient-balance state stopped being reachable. The fixture now returns 0.5 STT. A gate noticing
+that a state it covers has moved out of reach is the gate working.
+
+**The general shape.** A form that asks for more than the transaction spends is not a cosmetic
+defect. It refuses users who could have succeeded, and it does so in the one place the product is
+asking for money — which is where a reader's trust is thinnest.
