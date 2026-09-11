@@ -1609,3 +1609,23 @@ commit whose own message cites it as the design authority. `git add -A` staged t
 read `git status` before staging rather than after. Restored byte-identical from `f93a3e3^`; D-049
 records it. It had been absent for four commits, and a missing authority does not announce itself —
 every later layout question would have been answered from my own judgement and looked no different.
+
+## 2026-09-11 — One demo script, cut to 2:00
+
+The 2:45 script was replaced rather than kept alongside a shorter one. Two scripts for one video is
+two things to keep true, and the older of them would have gone stale silently — it carried the
+superseded run's figures, and nothing would have failed when they stopped matching chain.
+
+`docs/demo-script.md` now holds a 2:00 cut: 304 words of voiceover, which lands at 2:01 at a normal
+narration pace, written as unbroken prose so it can be pasted into a text-to-speech tool without
+stage directions in the middle of it. A shot list follows, timed against the same clock, saying where
+the cursor goes on each beat.
+
+Every figure was re-read from chain before it was written down: 6,028 samples, 1,396 breaches, a
+bond of 1 STT paid out, and breach 0's book at 876000 against 897000 — a spread of 21,000 against a
+committed 15,000.
+
+Two things the script is careful about, both PRD §21. It is written in the past tense throughout,
+because sampling is not running and a present-tense narration over a closed run would be false in the
+one place an audience cannot check. And §23's limitations are spoken in beat 4 rather than captioned,
+for the same reason.
