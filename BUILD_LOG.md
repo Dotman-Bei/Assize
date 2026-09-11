@@ -1279,3 +1279,29 @@ written here. The rule it enforces is that a commit changing `contracts/`, `pack
 the same commit as the change, not the one after it. This entry is that correction.
 
   pnpm check:done    7 of 11 met, outstanding 1, 5, 8, 9
+
+## 2026-09-11 — `check:live` was agreeing with a reading, not with the chain
+
+The gate asserted the page showed 29541 samples and 29431 breaches. Those were literals, copied from
+a run that the deployment record had since superseded, so it passed against a stale deployment and
+told us the live app was fine when it was serving contracts we had replaced.
+
+That is the third time in one day the same mistake shipped: stale quotes hardcoded into the P3 run
+script, stale counts left in the README, and now stale counts inside the gate meant to catch stale
+pages. The rule that follows is narrow and worth keeping — **a check does not write down a number it
+could ask for.**
+
+It now reads `sampleCount` and `breachCount` from the registry named in the deployment record, at
+check time, and asserts the page agrees. The dossier's registry assertion comes from the record too,
+rather than matching a hardcoded prefix.
+
+Run immediately after, against the live site, it failed exactly as it should:
+
+```
+FAIL  sample count matches chain    registry says 1714
+FAIL  breach count matches chain    registry says 1396
+FAIL  registry address shown        expected 0x829465c447eD558b108001d472B5190424DCBfCc
+```
+
+The deployed page is still the P2 build. The source and the local artefact carry P3; the hosting has
+not been redeployed. That gap is now visible from a command instead of from remembering.

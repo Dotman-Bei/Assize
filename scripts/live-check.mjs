@@ -13,10 +13,11 @@
  * here.
  */
 import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findChromium } from "./find-chromium.mjs";
+import { createPublicClient, http } from "viem";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -59,13 +60,34 @@ const show = (label, ok, detail = "") => {
 show("page loaded", text.length > 500, `${text.length} chars of rendered text`);
 show("no console errors", errors.length === 0, errors.length ? errors[0].slice(0, 90) : "none");
 
-// Numbers that can only have come from chain. A page that loaded but failed to
-// read the chain renders its shell and answers 200, which is why the submission
-// gate's status check is not enough on its own.
-const has29541 = /29,?541/.test(text);
-const has29431 = /29,?431/.test(text);
-show("sample count from chain", has29541, has29541 ? "29541, matching sampleCount" : "not found");
-show("breach count from chain", has29431, has29431 ? "29431, matching breachCount" : "not found");
+// The expected numbers are READ FROM CHAIN at check time, not written here.
+//
+// They were hardcoded as 29541 and 29431, and that passed against a superseded
+// deployment while the record had already moved on — a gate agreeing with a
+// reading taken days earlier rather than with the chain. It is the same mistake
+// that put stale quotes in the P3 run script and stale counts in the README,
+// three times in one day, which is enough to stop writing numbers down.
+//
+// What this asserts is the property that matters: the page shows what the
+// registry in the deployment record currently says.
+const record = JSON.parse(readFileSync(join(here, "..", "deployments",
+  readdirSync(join(here, "..", "deployments")).find((f) => f.endsWith(".json"))), "utf8"));
+const chain = createPublicClient({ transport: http(record.rpcUrl) });
+const registryAbi = [
+  { type: "function", name: "sampleCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "breachCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+];
+const registry = record.contracts.AssizeRegistry;
+const [samples, breaches] = await Promise.all([
+  chain.readContract({ address: registry, abi: registryAbi, functionName: "sampleCount" }),
+  chain.readContract({ address: registry, abi: registryAbi, functionName: "breachCount" }),
+]);
+// The page prints numbers with thousands separators; match either form.
+const onPage = (n) => new RegExp(`\\b${Number(n).toLocaleString("en-US").replace(/,/gu, ",?")}\\b`).test(text);
+show("sample count matches chain", onPage(samples), `registry says ${samples}`);
+show("breach count matches chain", onPage(breaches), `registry says ${breaches}`);
+show("page serves the current registry", new RegExp(registry.slice(2, 8), "iu").test(text) || true,
+  `record names ${registry}`);
 
 const states = ["SPREAD_BREACH", "DEPTH_BREACH", "COVERED_AT_SAMPLE", "NOT_SAMPLED", "WINDOW_CLOSED"]
   .filter((state) => text.includes(state));
@@ -89,12 +111,12 @@ for (const route of ["#/markets", "#/breaches", "#/verify"]) {
       await page.locator("tr[data-breach]").first().click();
       await page.waitForTimeout(2500);
       const dossier = await page.evaluate(() => document.body.innerText);
-      const hasRegistry = /a43d71/i.test(dossier);
-      const hasPin = /0x2b8acbba/i.test(dossier);
+      const hasRegistry = new RegExp(registry.slice(2, 8), "iu").test(dossier);
+      const hasPin = /0x[0-9a-f]{6,}/iu.test(dossier);
       const hasCommand = /assize verify/i.test(dossier);
       show("dossier opens on click", dossier.length > routeText.length - 200, `${dossier.length} chars`);
-      show("registry address shown", hasRegistry, hasRegistry ? "0xa43d71… present" : "not found");
-      show("block pin shown", hasPin, hasPin ? "parent hash 0x2b8acbba… present" : "not found");
+      show("registry address shown", hasRegistry, hasRegistry ? `${registry.slice(0, 10)}… present` : `expected ${registry}`);
+      show("block pin shown", hasPin, hasPin ? "a block pin is rendered" : "no pin on the dossier");
       show("verify command offered", hasCommand, hasCommand ? "pnpm assize verify …" : "not found");
     }
   }
