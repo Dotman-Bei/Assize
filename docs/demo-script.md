@@ -18,15 +18,13 @@ at about 1:55 at a normal narration pace.
 
 A market shows you a price. That price is a claim about an order book you cannot see, and nothing checks it. A market maker can look tight and disappear the moment it matters. You find out by losing money.
 
-So the maker puts money on it first. This is a commitment, published on chain before the window opens. Maximum spread, fifteen thousand. Minimum depth, ten million. One token bonded behind it. It is not a promise you have to trust. It is a statement that can be checked against what the book actually did.
+Assize makes them put money on it first. Before the window opens, a maker publishes a commitment on chain. Maximum spread, fifteen thousand. Minimum depth, ten million. One token bonded behind it. Not a promise you have to trust. A statement that can be checked.
 
-Somnia's validators do the checking. Every time the market emits an event, they wake our handler inside that same block, read the book, and write down what they saw. Six thousand and twenty-eight samples. One thousand three hundred and ninety-six of them recorded a breach. We did not take these readings. We cannot skip them, and we cannot fake them.
+Here is how Assize checks it. Every time the market emits an event, Somnia's validators wake our handler inside that same block. It reads the book at that instant and stores what it saw, pinned to the block it came from. The contract compares that reading against the commitment and labels it. Held, or breached. Six thousand and twenty-eight samples. One thousand three hundred and ninety-six breaches. We did not take these readings, and we cannot fake them.
 
-Here is one. The book showed eight hundred and seventy-six thousand against eight hundred and ninety-seven thousand. A spread of twenty-one thousand, against a committed maximum of fifteen thousand. Breach.
+Here is one. The book showed eight hundred and seventy-six thousand against eight hundred and ninety-seven thousand. A spread of twenty-one thousand, against a committed maximum of fifteen thousand. Breach. The bond is forfeited, and then it is paid, to a trader the registry saw filling an order inside that window. One token, on chain, in this transaction.
 
-The bond is forfeited. And then it is paid, to a trader the registry saw filling an order inside that window. One token, on chain, in this transaction.
-
-Two limits, said plainly. This measures instants, not intervals. A sample is one reading at one block, and never proof the book held between two. And a payout only ever reaches traders the chain saw trading. Hold a position, lose money, never trade in that window, and this pays you nothing.
+Two limits, said plainly. Assize measures instants, not intervals. One reading at one block, and never proof the book held between two. And a payout only ever reaches traders the chain saw trading. Hold a position, lose money, never trade in that window, and this pays you nothing.
 
 Make a commitment a listing requirement, and a venue can advertise its coverage because it has been measured, not because it says so. The instrument is small. What changes is whether a claim about a market survives contact with evidence.
 
@@ -49,7 +47,7 @@ requires every beat to survive a cold start.
 
 ### Beat 2 · Solution · 0:17–0:38
 
-*"So the maker puts money on it first… checked against what the book actually did."*
+*"Assize makes them put money on it first… A statement that can be checked."*
 
 | | |
 |---|---|
@@ -57,17 +55,17 @@ requires every beat to survive a cold start.
 | **Cursor** | Move along the first row left to right as the numbers are spoken: **Max spread 15,000** → **Min depth 10,000,000** → **Bond 1 STT**. |
 | **Timing** | Land on each figure as the voice says it. This is the beat where the envelope has to be legible. |
 
-### Beat 3 · Product · 0:38–1:02
+### Beat 3 · Product, how it works · 0:38–1:07
 
-*"Somnia's validators do the checking… we cannot fake them."*
+*"Here is how Assize checks it… we cannot fake them."*
 
 | | |
 |---|---|
-| **Show** | Scroll to the sample stream below the table. |
-| **Cursor** | Sweep slowly down the rows while they scroll, then stop on the **6,028 / 1,396** counters on Overview. |
-| **Key frame** | Hold on those two numbers for the last sentence. Their difference is the whole argument. |
+| **Show** | Overview, the **How it works** section, then scroll to the sample stream. |
+| **Cursor** | Walk the lifecycle steps left to right as the mechanism is described — **Book event** → **Reactive sample** → **Deterministic verdict** — then sweep down the sample rows. |
+| **Key frame** | Stop on the **6,028 / 1,396** counters and hold for the last sentence. Their difference is the whole argument. |
 
-### Beat 4 · Demonstration · 1:02–1:43
+### Beat 4 · Demonstration · 1:07–1:45
 
 *"Here is one… this pays you nothing."*
 
@@ -82,7 +80,7 @@ requires every beat to survive a cold start.
 > The limitations are not a caveat track under the pictures. §23 requires them out loud, and this is
 > the one place a viewer cannot check them for themselves.
 
-### Beat 5 · Future vision · 1:43–1:58
+### Beat 5 · Future vision · 1:45–2:00
 
 *"Make a commitment a listing requirement… survives contact with evidence."*
 
