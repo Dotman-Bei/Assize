@@ -1629,3 +1629,20 @@ Two things the script is careful about, both PRD §21. It is written in the past
 because sampling is not running and a present-tense narration over a closed run would be false in the
 one place an audience cannot check. And §23's limitations are spoken in beat 4 rather than captioned,
 for the same reason.
+
+## 2026-09-11 — The demo script cited a sample that had not breached
+
+Rewriting the narration in the PRD's register meant naming a specific reading on camera, and the one
+named was **sample zero**. `verdictOf(0)` returns **2**, which is `WINDOW_CLOSED`: it was taken 1,600
+blocks before the window opened, so the commitment did not apply to it and it is not a breach at all.
+
+The script would have pointed at a number on screen and called it a spread breach while the app
+displayed `WINDOW_CLOSED` beside it — in beat 4, which is the beat a judge watches hardest.
+
+`breachAt(0)` names **sample 243**: bid 897000, ask 917000, an absolute spread of 20,000 against a
+committed 15,000, `verdictOf` returning 4. That is the reading the dossier actually opens on, and it
+is what the script cites now.
+
+It was caught by re-reading every figure from chain after writing them down, which is the only reason
+the first version's numbers looked right: they were real numbers, from a real sample, that meant
+something else. **A figure being on chain does not make the sentence around it true.**

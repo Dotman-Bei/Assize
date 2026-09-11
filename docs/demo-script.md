@@ -22,7 +22,7 @@ Assize is the instrument that makes it binding. A maker publishes a quoting comm
 
 Enforcement is not ours to perform. Somnia's reactivity precompile invokes our handler inside the block that carried the market's event. The handler reads the top of the book at that instant and stores a sample: both prices, both sizes, the block number, and the parent hash that pins it to one block on one chain. The verdict is then computed from stored data alone. The envelope, and the sample. Nothing else. Six thousand and twenty-eight samples. One thousand three hundred and ninety-six breaches.
 
-Sample zero. Bid, eight hundred and seventy-six thousand. Ask, eight hundred and ninety-seven thousand. An absolute spread of twenty-one thousand, against a committed maximum of fifteen thousand. Spread breach. The bond forfeits on the first breach in the window, and settles pro rata to witnessed traders: addresses the registry saw filling inside that window, learned from the pool's own order logs. One token, this transaction.
+Breach zero. Bid, eight hundred and ninety-seven thousand. Ask, nine hundred and seventeen thousand. An absolute spread of twenty thousand, against a committed maximum of fifteen thousand. Spread breach. The bond forfeits on the first breach in the window, and settles pro rata to witnessed traders: addresses the registry saw filling inside that window, learned from the pool's own order logs. One token, this transaction.
 
 Two limits. Assize evaluates at sampled instants, not across intervals. And a payout reaches witnessed traders only.
 
@@ -67,12 +67,12 @@ requires every beat to survive a cold start.
 
 ### Beat 4 · Demonstration · 1:07–1:45
 
-*"Sample zero… a payout reaches witnessed traders only."*
+*"Breach zero… a payout reaches witnessed traders only."*
 
 | | |
 |---|---|
 | **Show** | **Breaches** tab. Click the first row. |
-| **Cursor** | On the dossier: point to **bid 876000**, then **ask 897000**, then the **committed maximum 15,000** as each is spoken. |
+| **Cursor** | On the dossier: point to **bid 897000**, then **ask 917000**, then the **committed maximum 15,000** as each is spoken. |
 | **Then** | Open the claim transaction in the explorer: `0xec831878e0c0e94c8c7bdec3bb6411a6fe4739cc3402d52dd0d13186ae3a1d25` |
 | **Cursor** | Point at the **1 STT value** and at the **recipient address**. |
 | **On the two limits** | Come back to the app and rest the cursor on the **Hard protocol boundaries** section. Do not move it while they are said. |
