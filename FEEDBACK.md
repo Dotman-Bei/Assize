@@ -193,6 +193,73 @@ template's `discover.mjs`, not in the network documentation. On a chain with 100
 
 ---
 
+## 9. `SomniaExtensions.unsubscribe` can permanently wedge a handler contract
+
+**Severity: high. Code, not documentation — and it cost us a second deployment.**
+
+Package: `@somnia-chain/reactivity-contracts@0.2.1`,
+`contracts/interfaces/SomniaExtensions.sol`, lines 148-154:
+
+```solidity
+function unsubscribe(uint256 subscriptionId) internal {
+    (bool success, ) = SOMNIA_REACTIVITY_PRECOMPILE_ADDRESS.call(
+        abi.encodeWithSelector(ISomniaReactivityPrecompile.unsubscribe.selector, subscriptionId)
+    );
+    if (!success) revert UnsubscribeFailed();
+}
+```
+
+The chain removes a subscription on its own when the owner's balance falls below the floor — that
+is documented, and it is finding 5 above. **What is not documented is that the removal leaves the
+owning contract holding a subscription id the precompile no longer recognises, and that this helper
+then reverts when asked to clear it.**
+
+The two rules combine into an unrecoverable state. A handler that guards `subscribe` against
+double-subscription — the obvious way to write it, and what the reference's own one-subscription
+model suggests — stores the id and clears it in `unsubscribe`. Once the chain has removed the
+subscription:
+
+- `subscribe` refuses, because the stored id is non-zero;
+- `unsubscribe` reverts `UnsubscribeFailed` (`0x13e7ce5d`), because the precompile rejects an id it
+  no longer knows;
+- and the state reset in `unsubscribe` shares that transaction, so **the revert rolls it back too.**
+
+There is no third call. The contract can never subscribe again.
+
+**Reproduction, on Shannon.** Subscriber `0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0`, subscription
+`17611580`, removed by the chain after the prefund ran out:
+
+```
+$ cast rpc somnia_reactivityGetSubscriptions 0x2c07cb635c20e89bdc8a10bd85c4f20f8b5a92f0
+[]
+
+$ cast call $SUB "subscribe(bytes32[4],(uint64,uint64,uint64))(uint256)" ...
+Error: execution reverted: AlreadySubscribed   (0x5fd8a132, ours)
+
+$ cast call $SUB "unsubscribe()"
+Error: execution reverted: UnsubscribeFailed   (0x13e7ce5d, yours)
+```
+
+The contract still held 50 STT at that point. It was recoverable only because we had added a
+`sweep` function for unrelated reasons; without one, the balance would have been stranded with the
+contract.
+
+**Suggestion, in preference order.**
+
+1. Do not treat the precompile's refusal as failure. Being asked to cancel something already
+   cancelled is the goal reached by another route. Return `bool` instead of reverting, or add
+   `unsubscribeIfPresent` alongside, so a caller can clear its own state unconditionally.
+2. Failing that, document it next to the removal rule: "a subscription removed by the chain still
+   leaves your stored id set, and `unsubscribe` will revert on it — clear your state before
+   calling, not after."
+
+The general shape is worth stating plainly, because it will bite others: **a library helper that
+reverts when the counterparty has already done the thing makes the caller's own state unlockable by
+a third party.** The chain removes subscriptions unilaterally and by design, so every contract built
+on this helper has the wedge latent in it.
+
+---
+
 ## What worked well
 
 Worth saying, because it shaped the build:

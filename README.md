@@ -263,10 +263,15 @@ nobody can claim would be a lie.
 
 ## Feedback to the organisers
 
-`FEEDBACK.md` — eight findings from building this, each reproducible from a clean environment, with
-exact versions and payloads. The expensive one is finding 6: a reactivity handler that runs out of
-gas is charged and writes nothing, and from outside is indistinguishable from a subscription that
-never fired. It cost us a deployment.
+[`FEEDBACK.md`](FEEDBACK.md) — nine findings from building this, each reproducible from a clean
+environment, with exact versions and payloads.
+
+The two expensive ones both cost a deployment. Finding 6: a reactivity handler that runs out of gas
+is charged and writes nothing, and from outside is indistinguishable from a subscription that never
+fired. Finding 9: when the chain removes a subscription on its own, the pinned library's
+`unsubscribe` reverts on the id it left behind — so a handler that guards against double-subscribing
+can never subscribe again, and any balance it holds is stranded unless it happens to have a sweep
+function.
 
 It also records what worked, including the reactivity reference documenting that a subscription can
 feed itself — one sentence that we turned into a tested guard.
