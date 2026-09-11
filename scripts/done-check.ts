@@ -78,10 +78,11 @@ function main(): void {
   // summarised, because "gates pass" with two cut underneath it is the summary
   // that would mislead.
   const g12 = runs("submission:check");
+  const g5 = runs("verify:testnet -- C-005");
   items.push({
     n: 1, text: "Every gate in §22 passes on a fresh clone",
     state: "not-met",
-    detail: `G5 cut under K10, G6 not attempted, G9 no testers, G12 ${g12 ? "passes" : "outstanding"}`,
+    detail: `G5 ${g5 ? "passes (P3, D-047)" : "FAILS"}, G6 not attempted, G9 no testers, G12 ${g12 ? "passes" : "outstanding"}`,
   });
 
   /* 2 ---------------------------------------------------------------- */
