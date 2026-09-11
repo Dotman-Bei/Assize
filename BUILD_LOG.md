@@ -1667,3 +1667,15 @@ spending one decoratively makes a badge mean less.
 The favicon is the new mark, inlined as a data URI. D-051 records the reasoning, including a
 discrepancy left deliberately alone: `frontend.md` specifies the brand block in mono and the app
 renders it in sans. The lockup follows the document; the header was not silently corrected.
+
+## 2026-09-11 — The browser tab says Assize
+
+The tab read `Assize. Liquidity is a promise. Assize enforces the bond.` — the whole hero headline,
+which truncates to a fragment in a real tab strip and repeats the name twice before saying anything.
+
+`frontend.md` line 87 specifies that sentence as the **Headline**, the hero H1. It says nothing about
+the document title, so the tab had borrowed the headline rather than following a spec. The title is
+now `Assize`; the headline is untouched and still opens the page.
+
+The favicon beside it is the new mark (D-051). Together that is the whole tab: a drawn mark and one
+word.
