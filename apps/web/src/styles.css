@@ -72,7 +72,15 @@ nav.tabs a[aria-current="page"] { color: var(--text-primary); background: var(--
 .health { display: flex; align-items: center; gap: 7px; font-family: var(--font-sans); font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
 .pulse { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--verdict-covered); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-.navlink { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+/* `nowrap` keeps a hash or an address from breaking mid-string, which is what
+   it is for. It also kept a sentence-length link from breaking at all: "Precompile
+   callback transaction on the block explorer" rendered 344px wide in a 320px
+   window and pushed the whole document 49px sideways — the one genuine layout
+   defect the responsive audit found. A link may refuse to wrap only while it
+   fits; past that, reaching the content matters more than the line break. */
+.navlink { font-size: 13px; color: var(--text-secondary); white-space: nowrap; max-width: 100%;
+  overflow-wrap: anywhere; }
+@media (max-width: 640px) { .navlink { white-space: normal; } }
 .navlink:hover { color: var(--text-primary); }
 /* §2 primary white button */
 .btn { font-family: var(--font-sans); font-size: 13px; font-weight: 500; padding: 8px var(--s-3);
@@ -347,6 +355,21 @@ footer.site { border-top: 1px solid var(--border-subtle); margin-top: var(--s-24
   .health { display: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
+/* Touch sizing. frontend.md fixes the type scale and says nothing about phones,
+   so nothing here changes the scale at the sizes it specifies: these raise the
+   two values that fall below a readable and a tappable minimum, and only on
+   widths where a thumb is doing the work. */
+@media (max-width: 768px) {
+  .eyebrow, .pill, .src, .dupe, .hint { font-size: 12px; }
+  nav.tabs a { padding: 10px 12px; }
+  .chip { min-height: 36px; }
+  /* The copy affordance and the two hero links render at 22px, which is a
+     comfortable click and a poor tap. Height is raised without touching the
+     type, so the label reads at the size frontend.md sets. */
+  .copy { min-height: 34px; padding-inline: var(--s-3); }
+  .btn, button.btn, .card-link { min-height: 40px; }
+}
+
 @media (max-width: 390px) {
   main { padding: 0 var(--s-3); }
   h1 { font-size: 28px; }

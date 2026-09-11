@@ -10,6 +10,7 @@
   },
   "scripts": {
     "assize": "tsx packages/verifier/src/cli.ts",
+    "audit:responsive": "node scripts/responsive-audit.mjs",
     "audit:ui": "node scripts/ui-audit.mjs",
     "build": "pnpm -r --if-present build",
     "check:done": "tsx scripts/done-check.ts",

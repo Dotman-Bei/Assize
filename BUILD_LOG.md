@@ -1584,3 +1584,28 @@ pointed at `#/`, which is the Overview page and not the sections they name — a
 to Overview and `route()` then scrolls to the top. A link that appears to work and quietly lands you
 somewhere else is worse than one that does nothing, because nobody reports it. They route first and
 scroll after now.
+
+## 2026-09-11 — Responsive, and an audit that mostly reported itself
+
+`pnpm audit:responsive` loads six routes at seven widths and reports content wider than the window,
+text under 12px, and tap targets under 32px. 205 findings on the first run, and **most were the
+audit's own fault**: it called a horizontally scrolling table a defect 24 times because it did not
+know `.scroll` and `nav.tabs` carry `overflow: auto`, and it flagged 11px labels on a 1920px desktop
+where nothing is wrong with them.
+
+Two real defects underneath:
+
+- **`.navlink` is `white-space: nowrap`.** Right for a hash, wrong for a sentence: "Precompile
+  callback transaction on the block explorer" rendered 344px wide in a 320px window and pushed the
+  document 49px sideways. A link may refuse to wrap only while it fits.
+- **Eight tap targets under 32px**, including both hero links at 22px.
+
+Now clean at 320, 390, 430, 768, 1024, 1280, 1920. D-050 records the line taken, since `frontend.md`
+specifies no breakpoints at all: adapt the existing design, do not invent a new one — no colour,
+component or type scale enters that the document does not already contain.
+
+**And `frontend.md` was gone.** Not missing from disk only: deleted from the index in f93a3e3, a
+commit whose own message cites it as the design authority. `git add -A` staged the deletion and I
+read `git status` before staging rather than after. Restored byte-identical from `f93a3e3^`; D-049
+records it. It had been absent for four commits, and a missing authority does not announce itself —
+every later layout question would have been answered from my own judgement and looked no different.

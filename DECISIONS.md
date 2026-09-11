@@ -1551,3 +1551,66 @@ that a state it covers has moved out of reach is the gate working.
 **The general shape.** A form that asks for more than the transaction spends is not a cosmetic
 defect. It refuses users who could have succeeded, and it does so in the one place the product is
 asking for money — which is where a reader's trust is thinnest.
+
+---
+
+## D-049: I deleted the design authority and committed it
+
+**Date:** 2026-09-11, Phase P4
+**Status:** accepted, recording a process failure
+
+**Evidence.** `frontend.md` was absent from the working tree and from the index. `git log` places the
+deletion in **f93a3e3**, "Publish form: stop requiring a prefund the transaction never takes" — a
+commit whose message cites `frontend.md §3 Page 3` as its authority while removing the file.
+
+It was restored from `f93a3e3^` and is byte-identical:
+`fc8913bc7f993295a22e9e135a015c4a3f1c2fdbbfbdb8962c43427862a54669`.
+
+**How.** `git add -A` in every commit of this session. The deletion was staged with everything else
+and never appeared in anything I read, because I check `git status --short` before staging and not
+after. A removed file is one line in that output and I was reading it for my own changes.
+
+**Why it matters more than a restore.** `frontend.md` is the design authority for this repository,
+and the standing instruction is that where it is silent I stop and ask rather than invent. A missing
+authority does not announce itself: every later question about layout would have been answered from
+my own judgement, and the answer would have looked the same as one taken from the document. The
+deletion was live for four commits.
+
+**The rule this earns.** `git add -A` stages deletions, and a commit that cites a document as its
+authority must not be the commit that removes it. Read the staged summary, not the working tree's.
+
+---
+
+## D-050: Responsive behaviour, where the document is silent
+
+**Date:** 2026-09-11, Phase P4
+**Status:** accepted, extending `frontend.md` on the owner's instruction
+
+**Evidence.** Asked to make the app work at every screen size. `frontend.md` specifies a four-column
+bento, multi-column tables and a 640px form container, and contains no breakpoint, no mobile
+guidance and no small-screen rule of any kind. The standing instruction is to stop and ask rather
+than invent; the owner asked for this directly, which is the answer to that question.
+
+**The line taken.** Adapt the existing design to narrow widths; do not design a new one. Nothing here
+introduces a colour, a component or a type scale the document does not already contain. The changes
+are mechanical: let a table scroll, let a nav scroll, raise a label that falls below legibility and a
+control that falls below a thumb.
+
+**What was actually wrong.** `pnpm audit:responsive` loads six routes at seven widths and reports
+content wider than the window, text under 12px and tap targets under 32px. First run: 205 findings.
+
+**Most of them were the audit's fault, and that is the finding worth keeping.** It flagged tables and
+nav tabs as overflowing when both already sit in containers with `overflow: auto` — a horizontally
+scrolling table working exactly as intended, reported as a defect 24 times. It also flagged 11px
+labels and 31px tabs on a 1920px desktop, where neither is a problem. Scoping the ergonomic checks to
+touch widths and teaching it about scrollers left **two genuine defects**:
+
+- `.navlink` is `white-space: nowrap`, which is right for a hash and wrong for a sentence. "Precompile
+  callback transaction on the block explorer" rendered 344px wide in a 320px window and pushed the
+  whole document 49px sideways.
+- Eight controls below a comfortable tap size, including both hero links at 22px.
+
+**A page that scrolls sideways on a phone is not a styling preference.** It is content the reader
+cannot reach, and it was on the route a judge is most likely to open.
+
+Now clean at 320, 390, 430, 768, 1024, 1280 and 1920.
