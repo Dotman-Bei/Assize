@@ -1391,3 +1391,18 @@ app compiles in no protocol fact; all three now come from the deployment record,
 
 This one is worth noting for G9: it would have failed the first tester who used anything but
 MetaMask, and it would have looked like their wallet's fault.
+
+## 2026-09-11 — An empty Market dropdown on the publish form
+
+Reported from the live app: the Market select on Publish was blank, with nothing to choose.
+
+`renderPublish()` is called from `route()` and nowhere else, and its options come from
+`S.commitments`, which `loadChain()` fills asynchronously. A visitor already standing on Publish when
+that resolved kept the form built before any chain data arrived — permanently, because nothing
+re-rendered it. The only recovery was a reload, and nothing on screen suggested one.
+
+`loadChain()` now re-renders the form if Publish is the page on screen, and a market list that is
+genuinely empty says so rather than presenting an empty box: *"Still reading the registry. The list
+is queried from chain, never a hardcoded string, so it is empty until that returns."*
+
+`pnpm test:e2e` still passes all six states.

@@ -247,6 +247,12 @@ async function loadChain() {
   renderMarketDetail(S.commitments[0]);
   renderBreaches();
   renderTeaser();
+  // Publish is rendered from `route()` only, so a visitor already standing on it
+  // when this resolves keeps the form that was built before any chain data
+  // arrived — and its Market select is populated from `S.commitments`, which was
+  // empty. That is an empty dropdown with nothing to pick and no way to recover
+  // but a reload. Re-render it here if it is the page on screen.
+  if (!$('[data-page="/publish"]').classList.contains("hidden")) renderPublish();
 }
 
 /* ── Page 1 §2: live protocol telemetry bento ─────────────────────────────── */
@@ -497,8 +503,12 @@ function renderPublish() {
   const c = S.commitments[0];
   $("#publishForm").innerHTML = `
     <label class="field" for="fMarket">Market</label>
-    <select class="input" id="fMarket">${S.commitments.map((x) => `<option value="${x.marketId}">${cut(x.marketId, 14, 8)}</option>`).join("")}</select>
-    <div class="hint">Queried from chain, never a hardcoded string.</div>
+    <select class="input" id="fMarket">${S.commitments.length === 0
+      ? `<option value="">no market read from chain yet</option>`
+      : S.commitments.map((x) => `<option value="${x.marketId}">${cut(x.marketId, 14, 8)}</option>`).join("")}</select>
+    <div class="hint">${S.commitments.length === 0
+      ? "Still reading the registry. The list is queried from chain, never a hardcoded string, so it is empty until that returns."
+      : "Queried from chain, never a hardcoded string."}</div>
     <label class="field" for="fSpread">Maximum allowable spread, in raw price units</label>
     <input class="input" id="fSpread" type="number" value="${c ? c.maxSpread : 15000}">
     <div class="hint" id="spreadHint"></div>
