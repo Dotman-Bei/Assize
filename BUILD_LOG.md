@@ -1258,3 +1258,24 @@ failed under the next. Samples are aimed inside the window now, with one in eigh
 `WINDOW_CLOSED` exercised. Verified across four seeds: 75 passed, 0 failed.
 
 A flaky invariant is worse than a missing one, because it teaches you to rerun.
+
+## 2026-09-11 — `check:done` stopped holding its own answer
+
+Two of §28's items were decided by text inside `check:done` rather than by the world.
+
+Item 3 was hardcoded `unmeetable`, and that was right while settlement was cut: no deployed code
+could perform a payout, so no run could satisfy it. P3 shipped one, and the checklist kept its old
+answer — the exact drift this command was written to stop, reappearing inside the command itself. It
+now shells out to `verify:testnet` for C-004 and C-005, which read the sample, the breach, `paidOut`,
+`witnessedVolume` and the bond from chain. Item 1's summary line still read "G5 cut under K10" for
+the same reason.
+
+The command also read `demo.beat4NobodyWasPaidStatement`, the field that was renamed when that
+statement stopped being true.
+
+**Item 10 then failed, correctly**, because those two commits touched `scripts/` and nothing had been
+written here. The rule it enforces is that a commit changing `contracts/`, `packages/`, `apps/` or
+`scripts/` is work a reader of this log should be able to find — which means the log entry belongs in
+the same commit as the change, not the one after it. This entry is that correction.
+
+  pnpm check:done    7 of 11 met, outstanding 1, 5, 8, 9
