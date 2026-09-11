@@ -32,6 +32,9 @@ const abi = [
       { name: "maxSpread", type: "uint128" }, { name: "minSize", type: "uint128" },
       { name: "start", type: "uint64" }, { name: "end", type: "uint64" },
       { name: "bond", type: "uint256" }, { name: "forfeitedAtBreachIdPlusOne", type: "uint256" }] }] },
+  { type: "function", name: "activeCommitmentOf", stateMutability: "view",
+    inputs: [{ type: "address" }, { type: "bytes32" }],
+    outputs: [{ name: "found", type: "bool" }, { name: "commitmentId", type: "uint256" }] },
   { type: "function", name: "publishCommitment", stateMutability: "payable",
     inputs: [{ name: "marketId", type: "bytes32" }, { name: "maxSpread", type: "uint128" },
              { name: "minSize", type: "uint128" }, { name: "start", type: "uint64" }, { name: "end", type: "uint64" }],
@@ -616,6 +619,35 @@ async function refreshPublish() {
       ${state === "COVERED_AT_SAMPLE" ? "It would have held at that instant." : "It would have breached at that instant."}
       <span class="muted">That sample is the most recent one on chain, not a reading of the book now.</span></div>`;
   }
+  // PRD §10 allows one active commitment per maker per market, and the registry
+  // refuses a second with `CommitmentAlreadyActive`. That revert carries no
+  // reason data through a wallet's gas estimation, so it reached a user as an
+  // empty failure after the most natural thing to do next: publish again.
+  // Asked here instead, while the answer can still be a sentence.
+  const market = $("#fMarket").value;
+  if (S.account && market) {
+    const [found, existingId] = await S.client.readContract({
+      address: S.registry, abi, functionName: "activeCommitmentOf", args: [S.account, market],
+    });
+    if (found) {
+      const existing = await S.client.readContract({
+        address: S.registry, abi, functionName: "commitmentAt", args: [existingId],
+      });
+      // The slot frees when the window ends, which is the same test the contract
+      // applies — not whether the bond forfeited.
+      const head = await S.client.getBlockNumber();
+      if (head <= existing.end) {
+        box.innerHTML = dry + `<div class="note amber"><strong>You already have an active commitment
+          on this market.</strong> Commitment ${existingId} runs to block ${num(existing.end)}, and
+          one maker may hold one at a time on one market. It has ${num(existing.end - head)} blocks
+          left, about ${Math.round(Number(existing.end - head) / 600)} minute(s).
+          <div style="margin-top:var(--s-3)"><a class="navlink" data-nav="/markets">See it in the directory →</a></div></div>`;
+        button.disabled = true; button.textContent = "One Active Commitment Per Market";
+        return;
+      }
+    }
+  }
+
   if (held < total) {
     box.innerHTML = dry + `<div class="note amber"><strong>Insufficient STT.</strong> Testnet tokens must
       be obtained from the Somnia Shannon Faucet or the official Telegram community. You hold
@@ -625,6 +657,15 @@ async function refreshPublish() {
         <a class="btn btn-ghost" href="https://t.me/+XHq0F0JXMyhmMzM0" target="_blank" rel="noopener">Join Somnia Telegram Community</a>
       </div></div>`;
     button.disabled = true; button.textContent = "Insufficient STT Balance";
+    return;
+  }
+  if (!market) {
+    // An empty select would publish against the zero market id, which the
+    // registry accepts — it stores whatever it is given. A commitment against a
+    // market that does not exist is worse than a refused one.
+    box.innerHTML = dry + `<div class="note amber"><strong>No market selected.</strong> The list is
+      read from chain and is empty until that returns. Reload if it stays empty.</div>`;
+    button.disabled = true; button.textContent = "No Market Selected";
     return;
   }
   box.innerHTML = dry;
@@ -639,17 +680,66 @@ async function doPublish() {
   const data = encodeFunctionData({ abi, functionName: "publishCommitment",
     args: [$("#fMarket").value, BigInt($("#fSpread").value), BigInt($("#fDepth").value),
            start, start + BigInt($("#fWindow").value)] });
+  const value = parseEther(String($("#fBond").value));
   try {
+    // Simulate before signing. A wallet's gas estimation reports a custom error
+    // as a bare "execution reverted" with no data, so `CommitmentAlreadyActive`
+    // — the most likely refusal, since publishing again is the obvious next
+    // thing to try — reached the user as an empty failure. `simulateContract`
+    // decodes the named error and its arguments, which is what {publishError}
+    // then turns into a sentence.
+    await S.client.simulateContract({
+      account, address: S.registry, abi, functionName: "publishCommitment",
+      args: [$("#fMarket").value, BigInt($("#fSpread").value), BigInt($("#fDepth").value),
+             start, start + BigInt($("#fWindow").value)],
+      value,
+    });
+
     // The chain is required, and it is built from the deployment record rather
     // than written here (PRD §17). Without it viem refuses to send at all:
     // "No chain was provided to the request", which reached a user as a failed
     // Post Commitment with nothing they could do about it.
     const wallet = createWalletClient({ chain: walletChain(), transport: custom(globalThis.ethereum) });
-    const hash = await wallet.sendTransaction({ account, to: S.registry, data, value: parseEther(String($("#fBond").value)) });
+    const hash = await wallet.sendTransaction({ account, to: S.registry, data, value });
     $("#publishState").innerHTML = `<div class="note"><strong>Posted.</strong>
       <a class="navlink" href="${S.explorer}/tx/${hash}" target="_blank" rel="noopener">${cut(hash, 12, 8)} →</a></div>`;
   } catch (error) {
-    $("#publishState").innerHTML = `<div class="note rose"><strong>Not posted.</strong> ${esc(error.shortMessage ?? error.message)}</div>`;
+    $("#publishState").innerHTML = `<div class="note rose"><strong>Not posted.</strong> ${esc(publishError(error))}</div>`;
+  }
+}
+
+/**
+ * A refusal, in words the person who caused it can act on.
+ *
+ * The registry refuses with custom errors, and a wallet's gas estimation drops
+ * their data — so "you already have an active commitment on this market" arrived
+ * as `execution reverted` with nothing after it. Simulating first recovers the
+ * name and arguments; this turns them into the sentence, and falls back to
+ * whatever viem said rather than inventing a reason it does not know.
+ *
+ * @param {unknown} error whatever was thrown
+ * @returns {string} something a user can read
+ */
+function publishError(error) {
+  const named = error?.cause?.data?.errorName ?? error?.data?.errorName;
+  const args = error?.cause?.data?.args ?? error?.data?.args ?? [];
+  switch (named) {
+    case "CommitmentAlreadyActive":
+      return `You already hold commitment ${args[0]} on this market, and a maker may hold one at a `
+        + `time on one market. Wait for its window to end, or choose another market.`;
+    case "BondRequired":
+      return "A commitment needs a bond. Set one above zero.";
+    case "WindowStartsInThePast":
+      return `The window would start at block ${args[0]}, which the chain has already passed `
+        + `(it is at ${args[1]}). Somnia produces a block every 100ms. Try again.`;
+    case "WindowEndsBeforeItStarts":
+      return `The window ends at ${args[1]} before it starts at ${args[0]}.`;
+    case "ZeroAddress":
+      return "That address cannot be zero.";
+    default:
+      // Not a named error, or one this list has not met. Say what viem said
+      // rather than guess: a wrong explanation is worse than a raw one.
+      return error?.shortMessage ?? error?.message ?? String(error);
   }
 }
 

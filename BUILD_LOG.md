@@ -1448,3 +1448,35 @@ rather than an edit to `main.js`. The record gained `displayName` and `nativeCur
 chain double and passes, and it has never once exercised the publish *submit* path, because the
 double has no wallet. Three defects have now been found on that path by hand — the chain id check,
 the phantom prefund, and this — and the gate that covers the app found none of them.
+
+## 2026-09-11 — A successful publish, then an empty failure
+
+Reported as "it failed". It had not: commitment 1 was on chain, bonded 1 STT, maker
+`0x5e3cC65c…27fe6`. What failed was the obvious next thing — pressing Post Commitment again — and
+PRD §10 allows one active commitment per maker per market, so the registry refused it.
+
+The refusal arrived as `The contract function "publishCommitment" reverted`, with nothing after it.
+A wallet's gas estimation drops custom-error data, so `CommitmentAlreadyActive(1)` lost its name and
+its argument on the way out. The user had done the right thing, been told nothing, and had no way to
+learn that their first attempt had worked.
+
+Two fixes, because one is not enough:
+
+- **Asked before the button.** `activeCommitmentOf(maker, market)` is queried as the form is filled,
+  and a maker who holds one sees which commitment, the block it runs to, and roughly how long that
+  is. The button reads "One Active Commitment Per Market" rather than being pressable into a revert.
+- **Decoded when it happens anyway.** `simulateContract` runs before signing and recovers the error
+  name and arguments, which `publishError` turns into a sentence. An error it does not recognise
+  falls through to whatever viem said — a wrong explanation is worse than a raw one.
+
+Verified against the deployed registry with the address that actually hit it: `errorName
+CommitmentAlreadyActive, args 1`.
+
+**And a wrong conclusion on the way to that.** The first check reported the error as undecodable, and
+the reading was nearly published as "this node strips revert data". It does not: the MAKER account
+holds 0.96 STT and the simulation sent 1, so it failed on funds, which really does carry no data.
+Testing all four refusals is what caught it. A negative result from a single case is a single case.
+
+An empty market id was also accepted: the registry stores whatever bytes32 it is given, so a blank
+dropdown would have created a commitment against a market that does not exist. The form now refuses
+to submit without one.
