@@ -23,6 +23,12 @@ const sampleRecorded = parseAbiItem(
   "event SampleRecorded(uint256 indexed sampleId, uint256 indexed commitmentId, uint8 verdict, uint8 source, uint64 blockNumber, bytes32 blockHash, uint128 bid, uint128 ask, uint128 bidSize, uint128 askSize)",
 );
 
+/** A `--name value` flag, or undefined. */
+function flag(name: string): string | undefined {
+  const i = process.argv.indexOf(`--${name}`);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
+}
+
 /** An environment variable, treating blank as absent. */
 function env(name: string): string | undefined {
   const value = process.env[name];
@@ -57,16 +63,32 @@ async function main(): Promise<void> {
     client.readContract({ address: registry, abi: registryAbi, functionName: "breachCount" }),
   ]);
 
-  // Somnia caps eth_getLogs at 1000 blocks, so walk backwards in windows.
+  // The range to scan. By default the last SCAN_WINDOWS*1000 blocks, which is
+  // the "is it sampling right now" question. `--from`/`--to` asks a different
+  // and equally real question — what a completed run did over its own window —
+  // and a run that has ended cannot be described by a scan pinned to the head.
+  const fromFlag = flag("from");
+  const toFlag = flag("to");
+  const explicitRange = fromFlag !== undefined || toFlag !== undefined;
+  const scanTo = toFlag === undefined ? head : BigInt(toFlag);
+  const scanFrom = fromFlag === undefined
+    ? (scanTo > BigInt(SCAN_WINDOWS * 1000) ? scanTo - BigInt(SCAN_WINDOWS * 1000) : 0n)
+    : BigInt(fromFlag);
+  if (scanFrom > scanTo) {
+    process.stderr.write(`--from ${scanFrom} is after --to ${scanTo}.\n`);
+    process.exit(2);
+  }
+
+  // Somnia caps eth_getLogs at 1000 blocks per call, so walk the range in windows.
   const logs = [];
   let failedWindows = 0;
-  for (let i = 0; i < SCAN_WINDOWS; i += 1) {
-    const toBlock = head - BigInt(i) * 1000n;
-    if (toBlock <= 0n) break;
+  let scannedWindows = 0;
+  for (let start = scanFrom; start <= scanTo; start += 1000n) {
+    const end = start + 999n > scanTo ? scanTo : start + 999n;
+    scannedWindows += 1;
     try {
       logs.push(...(await client.getLogs({
-        address: registry, event: sampleRecorded,
-        fromBlock: toBlock - 999n, toBlock,
+        address: registry, event: sampleRecorded, fromBlock: start, toBlock: end,
       })));
     } catch {
       failedWindows += 1;
@@ -92,10 +114,16 @@ async function main(): Promise<void> {
   lines.push(`  samples recorded:  ${totalSamples}`);
   lines.push(`  breaches recorded: ${totalBreaches}`);
   lines.push(``);
-  lines.push(`The rest of this report covers a log scan of the last ${SCAN_WINDOWS * 1000} blocks`);
-  lines.push(`(${head - BigInt(SCAN_WINDOWS * 1000)} to ${head}). Somnia produces a block every 100ms,`);
-  lines.push(`so that window is well under an hour. A count of zero below means nothing was sampled`);
-  lines.push(`in the last hour — not that nothing was ever sampled. The totals above are the record.`);
+  lines.push(`The rest of this report covers a log scan of blocks ${scanFrom} to ${scanTo}`);
+  lines.push(`(${scanTo - scanFrom + 1n} blocks, ${scannedWindows} windows of 1000). Somnia produces a block`);
+  lines.push(`every 100ms, so 30000 blocks is well under an hour.`);
+  if (explicitRange) {
+    lines.push(`This range was given explicitly, so it describes whatever happened between those two`);
+    lines.push(`blocks and says nothing about any other part of the chain.`);
+  } else {
+    lines.push(`A count of zero below means nothing was sampled in the last hour — not that nothing`);
+    lines.push(`was ever sampled. The totals above are the record.`);
+  }
   lines.push(``);
   lines.push(`samples observed in the scanned range: ${logs.length}`);
   lines.push(`distinct blocks sampled:               ${blocks.size}`);
@@ -115,7 +143,10 @@ async function main(): Promise<void> {
   lines.push(`They are real observations and none is fabricated, but they are redundant, and`);
   lines.push(`the honest measure of how often the book was observed is the distinct-block`);
   lines.push(`count above, not the sample count. Neither number is dropped here.`);
-  writeFileSync("evidence/live-run.txt", lines.join("\n") + "\n");
+  const out = explicitRange ? `evidence/run-${scanFrom}-${scanTo}.txt` : "evidence/live-run.txt";
+  writeFileSync(out, lines.join("\n") + "\n");
+  lines.push(``);
+  lines.push(`written to ${out}`);
   process.stdout.write(lines.join("\n") + "\n");
 }
 

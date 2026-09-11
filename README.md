@@ -72,16 +72,48 @@ A maker committed to a maximum spread of **15000** raw price units on that marke
 **forfeited**.
 
 ```
-samples observed:        8664        SPREAD_BREACH      8554
-distinct blocks sampled:  599        COVERED_AT_SAMPLE   110
+samples observed:       29541        SPREAD_BREACH     29227
+distinct blocks sampled: 1899        DEPTH_BREACH        204
+                                     COVERED_AT_SAMPLE   110
                                      every other state     0
-                                     source: REACTIVITY 8664
+                                     source: REACTIVITY 29541
 ```
 
-Both states occur, on the same commitment, as the book moved. That is the measurement working: the
+Three states occur, on the same commitment, as the book moved. That is the measurement working: the
 envelope held at some instants and not at others, and the chain records which.
 
-Read those two counts together. See *How this could mislead you*.
+Read those two counts on the left together, not separately. 29,541 samples were taken across 1,899
+distinct blocks, because the subscription matches every log the pool emits and a busy block fires
+several. Each is a real reading and none is fabricated, but they are redundant — **1,899 is how
+often the book was actually observed.** See *How this could mislead you*.
+
+Reproduce the whole table:
+
+```bash
+pnpm evidence:report -- --from 484439389 --to 484519171
+```
+
+It reads the registry's own events, and its totals match the registry's `sampleCount` and
+`breachCount` counters exactly (29,541 and 29,431 = 29,227 + 204), scanned in 80 windows with none
+failing.
+
+### This run is finished, and nothing is sampling now
+
+The numbers above are a completed measurement, not a live feed, and the distinction is the kind this
+project exists to keep:
+
+| | |
+|---|---|
+| Sampling ran | block 484439389 to 484519171 |
+| Committed window | block 484437694 to 484837694, now closed |
+| Why sampling stopped | the handler prefund ran out and the chain removed the subscription (`DECISIONS.md` D-032) |
+
+So sampling ended **before** the window did. The instants between block 484519171 and the window's
+close were never observed, and they are `NOT_SAMPLED` — not coverage, and not counted as any. The
+subscriber contract could not be restarted afterwards either; D-044 records why, and the fix.
+
+Nothing is being sampled at this moment. Any page or command that shows this data is showing a
+finished run.
 
 ## Future vision
 

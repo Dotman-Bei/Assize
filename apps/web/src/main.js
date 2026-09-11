@@ -531,8 +531,16 @@ async function refreshPublish() {
   if (latest) {
     const state = evaluate({ maxSpread: spread, minSize: BigInt($("#fDepth").value || 0), start: 0n, end: 2n ** 63n },
       { ...latest.sample, source: sampleSourceFromCode(Number(latest.sample.source)) });
-    dry = `<div class="note">Against the latest on-chain sample this envelope evaluates to ${pill(state)}
-      ${state === "COVERED_AT_SAMPLE" ? "It would hold right now." : "It would breach immediately."}</div>`;
+    // Names the block the reading came from, and never says "now". The latest
+    // stored sample is the newest one that exists, which is not the same as a
+    // current one: sampling ended at block 484519171 when the chain removed the
+    // subscription, so "now" would assert something about an instant nobody
+    // observed. PRD §21 — a claim may not outrun its evidence, and this is the
+    // one screen that invites a reader to act on it.
+    dry = `<div class="note">Against the latest stored sample, taken at block
+      ${num(latest.sample.blockNumber)}, this envelope evaluates to ${pill(state)}
+      ${state === "COVERED_AT_SAMPLE" ? "It would have held at that instant." : "It would have breached at that instant."}
+      <span class="muted">That sample is the most recent one on chain, not a reading of the book now.</span></div>`;
   }
   if (held < total) {
     box.innerHTML = dry + `<div class="note amber"><strong>Insufficient STT.</strong> Testnet tokens must

@@ -80,6 +80,23 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
 
 Not attempted, and not to be claimed: G5 (payout) and G6 (a sustained 24h campaign).
 
+## The measurement run is closed
+
+D-046: the owner chose to keep the finished run rather than redeploy for a fresh window. Sampling
+ran blocks 484439389 to 484519171 — **29,541 samples across 1,899 distinct blocks**, all
+`REACTIVITY`, with 29,227 `SPREAD_BREACH`, 204 `DEPTH_BREACH` and 110 `COVERED_AT_SAMPLE`.
+Reproduce it with `pnpm evidence:report -- --from 484439389 --to 484519171`; its totals match the
+registry's `sampleCount` and `breachCount` exactly, from events rather than from those counters.
+
+Sampling stopped **before** the window closed, because the chain removed the subscription when the
+prefund ran out (D-032). Those unobserved instants are `NOT_SAMPLED` and are not counted as
+coverage. The subscriber could not be restarted afterwards; D-044 has the mechanism and the fix.
+
+Consequence for the demo: **PRD §23 beat 3 cannot be performed live.** "Samples arrive, the coverage
+state changes in front of the viewer" needs an open window, and there is not one. The video shows a
+finished run and has to say so — narrating a closed run in the present tense is the §21 failure in
+the one place an audience cannot check it.
+
 ## Stop boundary
 
 Nothing is deployed and nothing calls a live market until G1 and G2 pass. **Both now pass.** Nothing

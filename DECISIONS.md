@@ -1374,3 +1374,58 @@ so it was invisible to us and waiting for the first stranger, which is the popul
 **The rule this earns.** A default that is not a value must be absent, not blank. When a file's
 purpose is to name keys, it hands every consumer the empty-string case, and `??` will not save you
 from it.
+
+---
+
+## D-046: The finished run is the artefact, and the app must stop implying otherwise
+
+**Date:** 2026-09-11, Phase P4
+**Status:** accepted, owner's decision
+
+**Evidence.** The 50 STT recovered by `sweep` (D-044) arrived about forty minutes after the
+commitment window closed at block 484837694. Sampling had stopped long before that, at block
+484519171, when the chain removed the subscription (D-032). So new samples taken now would record
+`WINDOW_CLOSED`, not coverage.
+
+Restoring live coverage measurement needed a fresh registry and subscriber — `AssizeRegistry.subscriber`
+and `CoverageSubscriber.commitmentId` are both immutable, so neither could be repointed at a new
+commitment. The registry's `keeper` slot would have accepted a new subscriber without redeploying
+and was rejected for the reasons in D-044.
+
+**The decision.** Put to the owner, who chose to **keep the finished run** rather than redeploy.
+Nothing further is deployed and no STT is spent. The completed run stands as the artefact:
+
+```
+blocks 484439389 -> 484519171      29541 samples across 1899 distinct blocks
+  SPREAD_BREACH     29227          source: REACTIVITY 29541, KEEPER 0, UNLABELLED 0
+  DEPTH_BREACH        204          0 log windows failed during the scan
+  COVERED_AT_SAMPLE   110
+  every other state     0
+```
+
+That scan reproduces the registry's own counters exactly — 29,541 against `sampleCount`, and
+29,227 + 204 = 29,431 against `breachCount` — from events rather than from either counter, so the
+two agree without being derived from each other.
+
+**What the decision costs, stated plainly.** PRD §23 beat 3 is "samples arrive, the coverage state
+changes in front of the viewer". That is not performable against a closed window. The demo shows a
+finished run, and must say so; a recording narrated in the present tense over a run that ended
+yesterday would be the §21 failure in the place it is least checkable by the audience.
+
+**What it required changing.** A finished run presented in a live-sounding voice misleads by tense
+alone, which is a failure this project does not get to make casually:
+
+- `README.md` carried mid-run counts (8,664 samples, two states). It now carries the final figures,
+  the command that reproduces them, and a section saying the run is finished — including that
+  sampling ended *before* the window did, leaving instants that are `NOT_SAMPLED` and are not
+  counted as coverage.
+- `apps/web` told a maker composing an envelope "It would hold right now", derived from the latest
+  *stored* sample. The newest sample that exists is not a current one. It now names the block the
+  reading came from and says the sample is not a reading of the book now.
+- `pnpm evidence:report` could only scan backwards from the head, so a completed run was
+  undescribable by it — it reported zero samples for a run of 29,541. It takes `--from` and `--to`,
+  and a range given explicitly is labelled as describing only those blocks.
+
+**The rule this earns.** When measurement stops, the surfaces that present it change tense. The
+data staying true does not keep the page true, because a reader takes the tense as part of the
+claim.

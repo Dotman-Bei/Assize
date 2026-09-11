@@ -1,0 +1,40 @@
+Assize evidence — read from chain, not from our database
+generated 2026-09-11T03:40:14.874Z
+registry 0xa43d71fff5ecedc577a0623421a16c2d11dc6b61   chain 50312   head 485247496
+
+TOTALS, read from the registry and cumulative since deployment:
+  samples recorded:  29541
+  breaches recorded: 29431
+
+The rest of this report covers a log scan of blocks 484439389 to 484519171
+(79783 blocks, 80 windows of 1000). Somnia produces a block
+every 100ms, so 30000 blocks is well under an hour.
+This range was given explicitly, so it describes whatever happened between those two
+blocks and says nothing about any other part of the chain.
+
+samples observed in the scanned range: 29541
+distinct blocks sampled:               1899
+
+verdicts, every state on its own line (PRD §14):
+  NOT_SAMPLED             0
+  SAMPLER_FAILED          0
+  WINDOW_CLOSED           0
+  ABSENT                  0
+  SPREAD_BREACH       29227
+  DEPTH_BREACH          204
+  COVERED_AT_SAMPLE     110
+
+sample source, in storage and on screen (AGENTS.md):
+  UNLABELLED              0
+  REACTIVITY          29541
+  KEEPER                  0
+
+infrastructure: 0 log window(s) failed during the scan
+
+READ THIS BEFORE QUOTING THE SAMPLE COUNT.
+The subscription filters on the pool's address with a wildcard topic, so every
+log the pool emits triggers one callback. A block containing many pool events
+therefore produces many samples that read the same book at the same instant.
+They are real observations and none is fabricated, but they are redundant, and
+the honest measure of how often the book was observed is the distinct-block
+count above, not the sample count. Neither number is dropped here.
