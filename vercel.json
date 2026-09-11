@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm build && pnpm --filter @assize/web build:single",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "apps/web/dist",
+  "framework": null,
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/deployment.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ]
+}
