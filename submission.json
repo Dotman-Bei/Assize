@@ -1,20 +1,20 @@
 {
   "$comment": [
-    "PRD §24. The owner-held half of the submission package: facts a script cannot",
+    "PRD \u00a724. The owner-held half of the submission package: facts a script cannot",
     "produce, only check. Each is null until it is real. `pnpm submission:check`",
-    "reads this file, then verifies every declaration against the world — a URL",
-    "here is fetched, not trusted — and exits non-zero while anything is",
+    "reads this file, then verifies every declaration against the world \u2014 a URL",
+    "here is fetched, not trusted \u2014 and exits non-zero while anything is",
     "outstanding. Writing a value in here does not make G12 pass; it tells the",
     "gate where to look."
   ],
   "repository": "https://github.com/Dotman-Bei/Assize",
-  "liveAppUrl": null,
+  "liveAppUrl": "https://assize.vercel.app",
   "videoUrl": null,
   "feedbackFiledAt": null,
   "demo": {
     "$comment": [
-      "PRD §23 beat 4 ends with a witnessed trader claiming the bond. That path was",
-      "cut under §26 K10 (DECISIONS.md D-021) and AssizeRegistry has no settlement",
+      "PRD \u00a723 beat 4 ends with a witnessed trader claiming the bond. That path was",
+      "cut under \u00a726 K10 (DECISIONS.md D-021) and AssizeRegistry has no settlement",
       "function, so the beat cannot be performed as written. The video must say so",
       "out loud. Declare the words used, and the gate checks they are present."
     ],

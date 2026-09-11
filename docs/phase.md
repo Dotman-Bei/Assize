@@ -42,11 +42,26 @@ G3, G4 and G11. G3 and G4 pass. G11 needs its unfunded state surfaced.
    `pnpm claim:verify` re-derived 25 of 25 stored samples with `packages/reference` and agreed with
    the chain every time — no account, no API key, no access to anything of ours.
 
-   G7 as written also says "a stranger reaches the live app". `apps/web` is now built — a static
-   page reading the chain directly, with the live commitment, the sample stream grouped by instant,
-   the breach evidence and generated verification commands. It runs locally with
-   `pnpm --filter @assize/web dev`. **It is not deployed to a public URL**, which needs a hosting
-   account the owner holds. So G7 stays **partly met** until it is hosted.
+   G7 as written also says "a stranger reaches the live app". That is now true:
+   **https://assize.vercel.app**, a static page reading the chain directly, with no server, no
+   database and no environment variables — the addresses come from `deployments/` via
+   `deployment.json`, which is why §17 leaves nothing for a hosting dashboard to supply.
+
+   Asserted rather than assumed. `pnpm check:live` drives the deployed page in a real browser and
+   requires numbers that can only have come from chain, because a page that loads and then fails to
+   read the chain still answers 200:
+
+   ```
+   ok  sample count from chain    29541, matching sampleCount
+   ok  breach count from chain    29431, matching breachCount
+   ok  breach rows listed         25 row(s)
+   ok  dossier opens on click     registry address, block pin, verify command
+   ok  no console errors          none
+   LIVE CHECK PASSED
+   ```
+
+   The dossier check clicks a row, because that is the core action and it is behind a click rather
+   than a URL — a route-only check would never have reached it. **G7 is met.**
 
    Treating the app as cut by K10 was an error, corrected in D-025: K10 cuts the claim flow, not the
    frontend, and the gates it protects need one.
