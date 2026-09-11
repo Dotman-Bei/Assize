@@ -39,6 +39,8 @@ bound has ends.
 | `assize-mark.svg` | The mark alone, on dark. Default. |
 | `assize-mark-light.svg` | The mark on light backgrounds. |
 | `assize-avatar.svg` | The mark on its canvas square, 64×64. For avatars and anything that crops. |
+| `assize-logo-1024.png` | Raster square, for upload fields that reject SVG. |
+| `assize-logo-512.png` | The same at 512, for size-capped fields. |
 | `assize-lockup.svg` | Mark and wordmark, horizontal, on dark. |
 | `assize-lockup-light.svg` | The same on light. |
 
@@ -49,6 +51,10 @@ file because the app ships as one self-contained page.
 
 **Clear space.** One third of the mark's width on every side. In the lockup that is the gap between
 the mark and the wordmark, so the spacing is checkable by eye against itself.
+
+**Inside a square.** The mark's ink spans 34 of 64 units — just over half the frame. Smaller wastes
+the card at thumbnail size; larger crowds the edges. Both were rendered and compared before this was
+chosen, at full size and at 52px.
 
 **Minimum size.** 16px for the mark. Below that the channel closes and it reads as a filled block.
 The wordmark has no minimum of its own but should not be set below 11px, where the tracking collapses.
