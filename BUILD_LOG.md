@@ -1538,3 +1538,26 @@ the registry attributed to it, their unsettled volume and what `claimableFor` sa
 with a button that claims it. A wallet owed nothing is told so in those terms rather than by a
 disabled button with no explanation. The `OrderAttributed` scan states the range it covered, because
 "no orders found" and "the scan failed" must not look alike.
+
+## 2026-09-11 — The wordmark's dead space, and a tightening that clipped it
+
+Asked to cut the space above and below the wordmark drastically. Most of it was not margin at all:
+the glyphs are 80 units inside a viewBox that was 100 tall, and a `height: 300px` container magnified
+every empty unit threefold.
+
+Tightening the viewBox to 68 and scaling the container to 204 kept the rendered size identical — the
+scale factor is 300/100 and 204/68, both exactly 3 — and the arithmetic said the footprint fell from
+332px to 172px.
+
+**And it clipped the tops off every letter.** `getBBox` on a `<text>` returns the font's
+ascent-to-descent box rather than visible ink, so it could not tell me: it reported the box
+overflowing in both directions when ASSIZE, being all caps, has no descenders at all. Only a
+screenshot showed the truth, and the truth was that `dominant-baseline="middle"` does not put caps
+where "middle" suggests.
+
+Fixed by placing the baseline explicitly — `y="67"` in a 76-unit box — rather than centring on an
+assumption. Verified by looking at the rendered element, twice: once to find the clipping and once to
+confirm it was gone.
+
+Footprint 332px to 196px, glyph size unchanged. **The measurement that mattered was a picture**, which
+is the same lesson as D-037, D-040 and D-041 and the fourth time this repository has learned it.

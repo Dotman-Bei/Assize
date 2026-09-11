@@ -364,9 +364,15 @@ footer.site { border-top: 1px solid var(--border-subtle); margin-top: var(--s-24
  * See DECISIONS.md D-034.
  */
 /* Sized to read as background rather than as a line of copy: it fills the
-   content width, sits well below the last section, and is faint enough that the
-   pointer reveal is the only thing that brings it forward. */
-.reveal { height: 300px; margin: var(--s-24) 0 calc(var(--s-16) * -1); cursor: crosshair; opacity: 0.85; }
+   content width and is faint enough that the pointer reveal is the only thing
+   that brings it forward.
+
+   The glyphs are 80 units inside a viewBox that was 100 tall, so roughly a third
+   of the box was empty and the 300px height magnified all of it. The box is 76
+   now and the height 228, which is the same 3x scale — the wordmark renders at
+   exactly the size it did, with the dead space gone. Vertical footprint drops
+   from 96 + 300 - 64 = 332px to 16 + 228 - 48 = 196px. */
+.reveal { height: 228px; margin: var(--s-4) 0 calc(var(--s-12) * -1); cursor: crosshair; opacity: 0.85; }
 .reveal text {
   font-family: var(--font-sans); font-size: 80px; font-weight: 700;
   letter-spacing: 0.02em; fill: transparent; stroke-width: 0.35;
