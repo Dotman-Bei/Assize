@@ -351,7 +351,14 @@ footer.site { border-top: 1px solid var(--border-subtle); margin-top: var(--s-24
   .feature > h3 { font-size: 22px; }
   header.top { flex-wrap: wrap; height: auto; padding: var(--s-2) var(--s-3); }
   nav.tabs { order: 3; width: 100%; }
+  /* The desktop rule gives both sides `flex: 1 1 0`, so `.nav-right` fills the
+     remaining track and its `justify-content: flex-end` lands the wallet at the
+     right edge. Dropping to `flex: 0 0 auto` here removed that track, and the
+     button came to rest immediately after the brand with the rest of the row
+     empty beside it. `margin-left: auto` does the same job without a track:
+     it eats the free space and pushes the button to the edge. */
   .nav-left, .nav-right { flex: 0 0 auto; }
+  .nav-right { margin-left: auto; }
   .health { display: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }

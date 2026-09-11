@@ -1679,3 +1679,19 @@ now `Assize`; the headline is untouched and still opens the page.
 
 The favicon beside it is the new mark (D-051). Together that is the whole tab: a drawn mark and one
 word.
+
+## 2026-09-11 — The wallet button sat next to the brand on phones
+
+Reported: on mobile the Connect Wallet button should be at the far right of the header. It was not.
+It rested immediately after the wordmark with the whole right half of the row empty beside it.
+
+The desktop rule gives both sides `flex: 1 1 0`, so `.nav-right` fills the remaining track and its
+`justify-content: flex-end` puts the button against the right edge. The 768px override replaces that
+with `flex: 0 0 auto`, which removes the track, and with no track to fill there is nothing for
+`flex-end` to push against. The alignment rule was still there and had nothing left to align inside.
+
+`margin-left: auto` restores it without reintroducing the track: it consumes the free space directly.
+Measured after the change at 320, 390, 430 and 768, the button's right edge sits exactly 12px from
+the window at every one, which is the header's own padding.
+
+`pnpm audit:responsive` reports no layout defects at any width, and G10 still passes.
