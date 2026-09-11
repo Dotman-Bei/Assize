@@ -1325,3 +1325,38 @@ ok  breach count matches chain   page shows 1,396, chain moved 1396 -> 1396 whil
 Breaches are frozen because the window closed and every new sample is `WINDOW_CLOSED`, which is not
 a breach. Two readings of the same counter differing is the normal state of a live system, and a
 check that treats it as failure is a check that cannot be trusted when it does fail.
+
+## 2026-09-11 — D-044 proved on chain, with its own control
+
+The P3 subscription was closed and its prefund recovered. Both transactions matter as evidence, not
+just housekeeping.
+
+```
+unsubscribe  0x85afa5701bd32547414f91be567d33cf3e510c0d71255ce0f256f37a721565ad
+  SubscriptionCleared(18103719, acknowledged: true)
+sweep        0x7067ee2eb78e05ae1fe23115bad5142f95bb68f4197bd3a190ff1b4f707ba6d1
+  15.981404136 STT recovered
+```
+
+D-044 fixed an `unsubscribe` that reverted when the chain had already removed a subscription, taking
+its own state reset down with it and leaving the contract unable to ever subscribe again. That fix
+now has a live demonstration **and a control**, from the same call by the same caller against two
+contracts:
+
+```
+P3 subscriber (fixed)   -> InsufficientBalance   holds 0 STT; fund it and it subscribes again
+P2 subscriber (wedged)  -> AlreadySubscribed     permanently unrecoverable
+```
+
+`somnia_reactivityGetSubscriptions` returns `[]` for the P3 subscriber and its `subscriptionId` reads
+`0`. The wedged one still reads `17611580` and always will.
+
+**Cost per sample, measured: 0.002823 STT.** 33 STT funded, 15.981404136 swept back, 6,028 samples —
+arithmetic on two balances and a counter, all readable from chain, which is the rule D-043 earned.
+The P2 handler cost **0.001286**; this one does more per callback, decoding `OrderPlaced` and
+`OrderFilled` as well as reading the book. G11 asks for the figure to be published, so both are, and
+the difference is explained rather than averaged away.
+
+Breaches stop at 1,396 while samples reach 6,028: once the window closed every further sample is
+`WINDOW_CLOSED`, which is neither a breach nor coverage. The gap between those two numbers is the
+protocol working.

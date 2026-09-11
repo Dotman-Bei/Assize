@@ -22,6 +22,25 @@ Phase **P3**, deployed 2026-09-11. These carry settlement.
 | Committed envelope | max spread `15000` raw price units, min size `10000000` |
 | Bond | 1 STT, posted by the maker, **forfeited and paid out in full** |
 
+### The completed run, and what it cost
+
+| | |
+|---|---|
+| Samples | **6,028** |
+| Breaches | **1,396** (frozen once the window closed — later samples are `WINDOW_CLOSED`) |
+| Cost per sample | **0.002823 STT**, measured |
+| Subscription closed | `0x85afa5701bd32547414f91be567d33cf3e510c0d71255ce0f256f37a721565ad` |
+| Prefund recovered | `0x7067ee2eb78e05ae1fe23115bad5142f95bb68f4197bd3a190ff1b4f707ba6d1` |
+
+Measured, not estimated (the rule D-043 earned): 33 STT funded, 15.981404136 swept back, 6,028
+samples written. The P2 handler cost **0.001286**; this one costs more because each callback now
+decodes `OrderPlaced` and `OrderFilled` as well as reading the book.
+
+Closing the subscription emitted `SubscriptionCleared(18103719, acknowledged: true)`, and that is
+D-044 exercised on chain with its own control. The same call against the superseded subscriber still
+reverts `AlreadySubscribed` and can never be cleared; this one cleared, and now refuses only with
+`InsufficientBalance` — it would subscribe again if funded.
+
 ### The payout
 
 | | |

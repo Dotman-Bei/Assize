@@ -1,6 +1,6 @@
 {
   "$comment": [
-    "The deployment record. PRD §17 keeps addresses out of apps/ and packages/;",
+    "The deployment record. PRD \u00a717 keeps addresses out of apps/ and packages/;",
     "they live here and in DEPLOYMENT.md, and are read at runtime from the",
     "environment. This file is the record, not a source of compiled-in constants.",
     "",
@@ -21,7 +21,7 @@
   "accounts": {
     "deployer": "0xF3F0C3fB033e97F6f09BAe7F52329a8825167054",
     "maker": "0x62Ec9c9410c1b59647749D4d3005c75b9F380F38",
-    "$note": "Two accounts by design — DECISIONS.md D-019. In the P3 run the deployer was also the witnessed trader."
+    "$note": "Two accounts by design \u2014 DECISIONS.md D-019. In the P3 run the deployer was also the witnessed trader."
   },
   "measurement": {
     "dreamdexPool": "0x279Ff833DD608B3fFdBB7cA679A43D173Ee14c1A",
@@ -44,7 +44,32 @@
       "of roughly 22000 against a committed maximum of 15000 for the whole",
       "window, so the commitment was simply wrong about the book it described.",
       "The maker never had to withdraw anything."
-    ]
+    ],
+    "run": {
+      "blocks": "485291000 to 485329706",
+      "samples": 6028,
+      "breaches": 1396,
+      "costPerSampleStt": "0.002823",
+      "$note": [
+        "Measured, not estimated: 33 STT funded, 15.981404136 recovered by sweep,",
+        "6028 samples written. The P2 handler cost 0.001286 per sample; this one does",
+        "more work per callback because it decodes OrderPlaced and OrderFilled as well",
+        "as reading the book.",
+        "Breaches stop at 1396 because the window closed; every sample after that is",
+        "WINDOW_CLOSED, which is not a breach and is not coverage."
+      ]
+    },
+    "subscriptionClosed": {
+      "unsubscribeTx": "0x85afa5701bd32547414f91be567d33cf3e510c0d71255ce0f256f37a721565ad",
+      "sweepTx": "0x7067ee2eb78e05ae1fe23115bad5142f95bb68f4197bd3a190ff1b4f707ba6d1",
+      "acknowledged": true,
+      "$note": [
+        "SubscriptionCleared(18103719, acknowledged=true). This is the D-044 fix",
+        "exercised on chain: the same call on the superseded subscriber reverts",
+        "AlreadySubscribed and can never be cleared, while this one cleared and now",
+        "refuses only for InsufficientBalance \u2014 it would subscribe again if funded."
+      ]
+    }
   },
   "settlement": {
     "witnessedTrader": "0xF3F0C3fB033e97F6f09BAe7F52329a8825167054",
@@ -71,7 +96,7 @@
       "evidence for the 29,541-sample measurement. Superseded because both the",
       "registry's subscriber and the subscriber's commitment are immutable, so",
       "adding settlement meant deploying the pair again (DECISIONS.md D-047).",
-      "Its subscriber is also permanently wedged — see D-044."
+      "Its subscriber is also permanently wedged \u2014 see D-044."
     ],
     "phase": "P2",
     "deployedAt": "2026-09-10",
