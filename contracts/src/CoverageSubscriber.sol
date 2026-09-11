@@ -211,10 +211,18 @@ contract CoverageSubscriber is SomniaEventHandler {
     /// @inheritdoc SomniaEventHandler
     /// @dev Reached only through `SomniaEventHandler.onEvent`, which has already
     /// required `msg.sender` to be the reactivity precompile.
-    function _onEvent(address emitter, bytes32[] calldata, bytes calldata) internal override {
+    function _onEvent(address emitter, bytes32[] calldata topics, bytes calldata data)
+        internal
+        override
+    {
         // Defence in depth. The filter already scopes to the pool; this makes a
         // mis-scoped subscription fail loudly instead of sampling the wrong book.
         if (emitter != address(pool)) revert EmitterNotThePool(emitter);
+
+        // PRD §27 Phase P3. Read the witness out of the log before sampling the
+        // book, because both are the same instant and only this callback sees the
+        // log at all.
+        _witness(topics, data);
 
         (uint128 bid, uint128 bidSize) = _bestLevel(true);
         (uint128 ask, uint128 askSize) = _bestLevel(false);
@@ -236,6 +244,58 @@ contract CoverageSubscriber is SomniaEventHandler {
 
         (uint256 sampleId,) = registry.recordSample(commitmentId, sample);
         emit SampleForwarded(sampleId, sample.blockNumber);
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Witness decoding. PRD §27 Phase P3.
+     * --------------------------------------------------------------------- */
+
+    /// @dev The two pool logs that identify a trader who traded, hashed from
+    /// their signatures rather than pasted as opaque constants (PRD §17). Both
+    /// were confirmed against the live pool before this code was written: over
+    /// 3000 blocks the pool emitted exactly five topics, and `OrderPlaced` was
+    /// one of them at this hash.
+    bytes32 private constant ORDER_PLACED = keccak256(
+        "OrderPlaced(uint128,(uint128,bool,address,uint64,uint256,uint256,uint256,uint64))"
+    );
+    bytes32 private constant ORDER_FILLED =
+        keccak256("OrderFilled(uint128,uint128,uint256,uint256,uint256,uint256)");
+
+    /// @dev Record whichever half of a witness this log carries.
+    ///
+    /// `OrderFilled` names a `takerOrderId` and a quantity but no address.
+    /// `OrderPlaced` names an `orderId` and an owner but no fill. A trader who
+    /// traded is the join of the two, and neither log alone can pay anyone.
+    ///
+    /// Both halves are forwarded as they arrive and joined in the registry at
+    /// claim time, because these are separate logs delivered as separate
+    /// callbacks in an order this contract does not control.
+    ///
+    /// @dev A log that is neither is not an error. The subscription matches every
+    /// log the pool emits — that is what makes the sample stream dense — and most
+    /// of them carry no witness. Reverting on them would turn ordinary pool
+    /// traffic into failed callbacks that are charged for and write nothing,
+    /// which is exactly the failure DECISIONS.md D-022 cost us a deployment to
+    /// learn.
+    function _witness(bytes32[] calldata topics, bytes calldata data) private {
+        if (topics.length == 0) return;
+
+        if (topics[0] == ORDER_PLACED && topics.length >= 2 && data.length >= 96) {
+            // The tuple is static, so it is encoded inline: orderId, isBid,
+            // owner, ... — the owner is the third word.
+            uint128 orderId = uint128(uint256(topics[1]));
+            address placedBy = address(uint160(uint256(bytes32(data[64:96]))));
+            if (placedBy != address(0)) registry.attributeOrder(orderId, placedBy);
+            return;
+        }
+
+        if (topics[0] == ORDER_FILLED && topics.length >= 3 && data.length >= 32) {
+            // topics: [sig, takerOrderId, makerOrderId]
+            // data:   [quantityFilled, takerRemaining, makerRemaining, fillPrice]
+            uint128 takerOrderId = uint128(uint256(topics[1]));
+            uint256 quantityFilled = uint256(bytes32(data[0:32]));
+            registry.witnessFill(commitmentId, takerOrderId, quantityFilled);
+        }
     }
 
     /// @dev Best level on one side, or zeros when the side is empty.

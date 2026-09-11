@@ -18,8 +18,21 @@ contract RegistryHandler is Test {
     uint256 public publishCalls;
     uint256 public sampleCalls;
 
+    /// @dev Settlement tallies, kept here for the same reason as `totalBonded`:
+    /// an invariant checked against the subject's own `paidOut` would only prove
+    /// the contract agrees with itself.
+    uint256 public totalPaidOut;
+    uint256 public witnessCalls;
+    uint256 public claimCalls;
+    uint256 public rejectedClaims;
+
     address[3] internal makers = [makeAddr("maker-a"), makeAddr("maker-b"), makeAddr("maker-c")];
     bytes32[2] internal markets = [keccak256("market-a"), keccak256("market-b")];
+    address[3] internal traders =
+        [makeAddr("trader-a"), makeAddr("trader-b"), makeAddr("trader-c")];
+
+    uint128[] internal seenOrders;
+    mapping(uint128 => address) internal orderTrader;
 
     constructor() {
         registry = new AssizeRegistry(address(this));
@@ -78,6 +91,64 @@ contract RegistryHandler is Test {
         registry.recordSample(commitmentId, reading);
         sampleCalls += 1;
     }
+
+    /* --------------------------------------------------------------------- *
+     * Settlement, PRD §27 Phase P3.
+     * --------------------------------------------------------------------- */
+
+    /// @dev Attribute an order and credit it a fill, the two halves a claim
+    /// needs. Driven as one call because a witness with only one half can never
+    /// pay anyone, and the invariants are about money moving.
+    function witness(uint256 commitmentSeed, uint256 traderSeed, uint128 orderId, uint96 quantity)
+        external
+    {
+        uint256 count = registry.commitmentCount();
+        if (count == 0) return;
+        uint256 commitmentId = bound(commitmentSeed, 0, count - 1);
+        address trader = traders[bound(traderSeed, 0, traders.length - 1)];
+
+        registry.attributeOrder(orderId, trader);
+        registry.witnessFill(commitmentId, orderId, bound(quantity, 1, 1e18));
+        orderTrader[orderId] = trader;
+        seenOrders.push(orderId);
+        witnessCalls += 1;
+    }
+
+    /// @dev Claim as the trader who actually placed the order, which is the only
+    /// caller `claim` accepts. Failures are expected and are not tallied: the
+    /// bond may not be forfeited, the order may already be settled, or the share
+    /// may truncate to zero.
+    function claimOne(uint256 breachSeed, uint256 orderSeed) external {
+        uint256 breaches = registry.breachCount();
+        if (breaches == 0 || seenOrders.length == 0) return;
+        // Windows must be able to close, or `claim` is unreachable and the
+        // settlement invariants would pass by never executing any settlement.
+        vm.roll(block.number + 1_000);
+        uint256 breachId = bound(breachSeed, 0, breaches - 1);
+        uint128 orderId = seenOrders[bound(orderSeed, 0, seenOrders.length - 1)];
+        address trader = orderTrader[orderId];
+        if (trader == address(0)) return;
+
+        uint128[] memory ids = new uint128[](1);
+        ids[0] = orderId;
+
+        uint256 before = trader.balance;
+        vm.prank(trader);
+        try registry.claim(breachId, ids) returns (uint256 amount) {
+            // Tallied from the trader's balance change, not from the return
+            // value, so the tally is independent of the contract under test.
+            totalPaidOut += trader.balance - before;
+            require(amount == trader.balance - before, "claim paid a different amount than it returned");
+            claimCalls += 1;
+        } catch {
+            // A rejected claim is a valid outcome and moves no money: the bond
+            // is not forfeited, the order is already settled, or the share
+            // truncated to zero. AGENTS.md forbids an empty catch, so this one
+            // says why and leaves every tally untouched, which the invariants
+            // then check.
+            rejectedClaims += 1;
+        }
+    }
 }
 
 /// @notice PRD §13 invariants. "Bond conservation" is the one that applies in
@@ -93,29 +164,55 @@ contract BondConservationTest is Test {
         targetContract(address(handler));
     }
 
-    /// @notice Every wei ever bonded is still held by the registry.
-    /// @dev In Phase P1 there is no settlement path at all (DECISIONS.md D-006),
-    /// so conservation is total: the balance equals the sum of every bond that
-    /// was accepted. When P3 adds `claim()` this invariant weakens to
-    /// "balance == bonded - paid out", and the change should be deliberate.
+    /// @notice Every wei bonded is still held, less exactly what was claimed.
+    ///
+    /// @dev This is the deliberate weakening the P1 version of this file named in
+    /// advance. Until P3 there was no settlement path at all (D-006), so
+    /// conservation was total and the balance equalled the sum of every bond.
+    /// `claim` moves money, so the statement becomes `bonded - paid out` — and it
+    /// stays an equality. A weakening to `assertGe` would have let a payout of
+    /// the wrong size pass, which is the whole thing worth checking here.
+    ///
+    /// @dev Both sides are tallied outside the registry: `totalBonded` from what
+    /// the handler deposited, `totalPaidOut` from the claimants' balance changes.
+    /// Neither reads the registry's own `paidOut`.
     function invariant_every_bond_is_still_held() public view {
         assertEq(
             address(registry).balance,
-            handler.totalBonded(),
-            "registry balance diverged from the bonds it accepted"
+            handler.totalBonded() - handler.totalPaidOut(),
+            "registry balance diverged from bonds accepted less claims paid"
         );
     }
 
-    /// @notice No sequence of calls moves ETH out of the registry.
-    /// @dev PRD §10: no admin withdrawal of bonds. The property is structural —
-    /// there is no payable-out function — and this asserts it holds under
-    /// arbitrary call sequences rather than by inspection.
-    function invariant_no_ether_ever_leaves() public view {
-        assertGe(
-            address(registry).balance,
-            handler.totalBonded(),
-            "ether left the registry, which has no path to send any"
+    /// @notice No sequence of calls pays out more than the bonds that forfeited.
+    ///
+    /// @dev The structural version of this — "there is no payable-out function"
+    /// — retired when `claim` arrived, and replacing it with nothing would have
+    /// left the money path asserted by inspection alone. What survives the
+    /// change is the property that actually protects a maker: a bond that did
+    /// not forfeit is never touched, so payouts can never exceed the total of
+    /// the bonds that did.
+    function invariant_payouts_never_exceed_forfeited_bonds() public view {
+        uint256 forfeited;
+        uint256 count = registry.commitmentCount();
+        for (uint256 i = 0; i < count; ++i) {
+            (bool isForfeited,) = registry.forfeitureOf(i);
+            if (isForfeited) forfeited += registry.commitmentAt(i).bond;
+        }
+        assertLe(
+            handler.totalPaidOut(),
+            forfeited,
+            "more was paid out than the forfeited bonds could cover"
         );
+    }
+
+    /// @notice PRD §13: no payout without a stored breach.
+    /// @dev If nothing has breached, nothing can have been paid — whatever
+    /// sequence of witnesses and claims was attempted.
+    function invariant_no_payout_without_a_breach() public view {
+        if (registry.breachCount() == 0) {
+            assertEq(handler.totalPaidOut(), 0, "a payout happened with no breach on record");
+        }
     }
 
     /// @notice A breach is never recorded without a sample to point at.

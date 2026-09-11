@@ -436,4 +436,97 @@ contract CoverageSubscriberTest is Test {
             gasLimit: SomniaExtensions.DEFAULT_HANDLER_GAS_LIMIT
         });
     }
+
+    /* ------------------------- witness decoding --------------------------- */
+
+    /// @dev A real `OrderPlaced` payload, copied byte for byte from the live
+    /// DreamDEX pool on Shannon rather than constructed here.
+    ///
+    /// This matters more than it looks. The handler reads the owner out of a
+    /// fixed calldata window, `data[64:96]`, which is only correct because the
+    /// tuple is static and therefore encoded inline with no offset word in front
+    /// of it. A payload built by `abi.encode` in this file would agree with
+    /// whatever the handler did, right or wrong — the two would share the
+    /// mistake. This one cannot: the pool produced it, and the owner in it is a
+    /// third party's address.
+    ///
+    /// Block 485278xxx, order id 0x290000000000019432, owner 0x7842b5…09153.
+    bytes private constant REAL_ORDER_PLACED_DATA =
+        hex"0000000000000000000000000000000000000000000000290000000000019432"
+        hex"0000000000000000000000000000000000000000000000000000000000000001"
+        hex"0000000000000000000000007842b547f485728ad88a0739a000da3f30d09153"
+        hex"0000000000000000000000000000000000000000000000000000000000000000"
+        hex"00000000000000000000000000000000000000000000000000000000000c40b8"
+        hex"000000000000000000000000000000000000000000000000000000000bebc200"
+        hex"000000000000000000000000000000000000000000000000000000000bebc200"
+        hex"00000000000000000000000000000000000000000000000018d42a50af50fc00";
+
+    function _deliver(bytes32[] memory topics, bytes memory data) internal {
+        vm.prank(PRECOMPILE);
+        subscriber.onEvent(address(pool), topics, data);
+    }
+
+    /// @notice An `OrderPlaced` log attributes the order to whoever placed it.
+    function test_an_OrderPlaced_log_attributes_the_order_to_its_owner() public {
+        bytes32[] memory topics = new bytes32[](2);
+        topics[0] = keccak256(
+            "OrderPlaced(uint128,(uint128,bool,address,uint64,uint256,uint256,uint256,uint64))"
+        );
+        topics[1] = bytes32(uint256(0x290000000000019432));
+
+        _deliver(topics, REAL_ORDER_PLACED_DATA);
+
+        assertEq(
+            registry.orderOwner(uint128(0x290000000000019432)),
+            address(0x7842b547F485728aD88a0739a000Da3f30d09153),
+            "the owner must be read from the third word of the tuple"
+        );
+    }
+
+    /// @notice An `OrderFilled` log credits the taker's order with the fill.
+    function test_an_OrderFilled_log_witnesses_the_fill() public {
+        bytes32[] memory topics = new bytes32[](3);
+        topics[0] = keccak256("OrderFilled(uint128,uint128,uint256,uint256,uint256,uint256)");
+        topics[1] = bytes32(uint256(42));   // takerOrderId
+        topics[2] = bytes32(uint256(99));   // makerOrderId
+        // quantityFilled, takerRemaining, makerRemaining, fillPrice
+        bytes memory data = abi.encode(uint256(750), uint256(0), uint256(250), uint256(5000));
+
+        _deliver(topics, data);
+
+        assertEq(registry.fillVolumeOf(subscriber.commitmentId(), 42), 750, "the taker's order carries the fill");
+        assertEq(registry.witnessedVolume(subscriber.commitmentId()), 750);
+        assertEq(registry.fillVolumeOf(subscriber.commitmentId(), 99), 0, "the maker's order is not a witness");
+    }
+
+    /// @notice Ordinary pool traffic carries no witness, and must not revert.
+    ///
+    /// @dev The subscription matches every log the pool emits — that is what
+    /// makes the sample stream dense — and most of them are neither of the two
+    /// events a witness needs. Reverting on them would turn routine traffic into
+    /// failed callbacks that are charged for and write nothing, which is the
+    /// failure DECISIONS.md D-022 cost a deployment to learn.
+    function test_an_unrelated_log_writes_a_sample_and_no_witness() public {
+        bytes32[] memory topics = new bytes32[](1);
+        topics[0] = keccak256("OrderCancelled(uint128)");
+
+        _deliver(topics, "");
+
+        assertEq(registry.sampleCount(), 1, "the book is still sampled");
+        assertEq(registry.witnessedVolume(subscriber.commitmentId()), 0, "but nothing was witnessed");
+    }
+
+    /// @notice A truncated payload is ignored rather than decoded from garbage.
+    function test_a_short_OrderPlaced_payload_is_not_decoded() public {
+        bytes32[] memory topics = new bytes32[](2);
+        topics[0] = keccak256(
+            "OrderPlaced(uint128,(uint128,bool,address,uint64,uint256,uint256,uint256,uint64))"
+        );
+        topics[1] = bytes32(uint256(5));
+
+        _deliver(topics, hex"0011");
+
+        assertEq(registry.orderOwner(5), address(0), "nothing is attributed from a short payload");
+        assertEq(registry.sampleCount(), 1, "and the sample is still written");
+    }
 }
