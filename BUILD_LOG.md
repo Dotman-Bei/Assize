@@ -1023,3 +1023,123 @@ carried `/root/.cache/ms-playwright/…` as the browser path, which AGENTS.md fo
 file and which would have worked on exactly one machine. The gate caught it; I committed before
 reading the gate output, which is the actual mistake. The browser is now discovered from the home
 directory, with `CHROME_PATH` as an override and Playwright's own resolution as the fallback.
+
+## 2026-09-10 — The published cost per sample was twelve times too high
+
+`DEPLOYMENT.md` and `docs/phase.md` both carried "roughly 0.016 STT" per sample. It was never
+measured. It was `gasLimit` × the documented 6 gwei floor — the worst a firing could cost, not what
+one did.
+
+The completed run divides out: 38 STT funded, 0.0033 left when the subscription was removed, 29,541
+samples. **0.001286 STT per sample.** A handler is charged for gas used, not the limit it reserves,
+and the observed price on the callback was 1.8 gwei rather than 6.
+
+The error was in our own disfavour, which does not make it acceptable. G11 asks for the cost to be
+*published*, and an estimate published where a measurement was available is the same defect as a
+claim above its rung. D-043.
+
+## 2026-09-11 — The subscriber was wedged, and `unsubscribe` was the untested function
+
+50 STT landed on the deployed subscriber and it could not be restarted.
+
+```
+subscribe()    -> AlreadySubscribed   (0x5fd8a132)
+unsubscribe()  -> UnsubscribeFailed   (0x13e7ce5d)
+```
+
+The chain had removed the subscription itself when the prefund ran out (D-032) without telling the
+contract, so `subscriptionId` still held `17611580`. `unsubscribe` set it to zero and *then* called
+the precompile; the precompile rejects an id it no longer knows, and that revert rolled the reset
+back with it. A funded contract with no reachable state where it samples again. `sweep(to)` was the
+only function still working, which is the only reason the 50 STT was not lost with it.
+
+The mistake was treating a refusal as failure. Being asked to stop something already stopped is the
+goal reached another way, and a contract's own state should not need a counterparty's agreement to a
+removal that counterparty performed unilaterally.
+
+`unsubscribe` now clears the id either way and emits `SubscriptionCleared(id, acknowledged)`, so a
+declined removal is on the log rather than swallowed. Two griefing holes beside it are closed: both
+`subscribe` and `unsubscribe` were callable by anyone, and `subscribe`'s caller picks the `gasLimit`
+and `maxFeePerGas` that every callback spends from this contract's prefund.
+
+**`unsubscribe` had no test of any kind** — the one function nothing exercised, and the one that
+wedged the deployment. It has five now. The regression test was verified to fail against the old
+behaviour before being trusted. D-044.
+
+### Commands
+
+```
+forge test                    58 passed, 0 failed, 3 skipped
+cast send ... "sweep(address)"   status 1, 50.003261984200000000 STT recovered
+```
+
+## 2026-09-11 — G12 gate, the §15 runbooks, and a blank that beat the record
+
+`pnpm submission:check` now exists, splitting the package where it actually splits: what the
+repository holds, and what the owner holds. Required files, the README's five beats in order,
+`DEPLOYMENT.md` agreeing with `deployments/` on every address, a clean tree — against a live URL, a
+video, beat 4's wording, and the feedback filing. Owner-held facts are declared in `submission.json`
+and none is taken at its word: a URL written there is fetched, a repository said to be public is
+asked unauthenticated whether it is, and the local tip is compared against the tip GitHub serves.
+
+Every check was verified to fail — a wrong address in `DEPLOYMENT.md`, a beat removed, the beats
+reordered, six phrasings through the beat 4 predicate. OUTSTANDING is reported separately from FAIL,
+because unfinished work and a broken repository are not the same problem.
+
+`docs/runbooks/` covers the five failures §15 names. Four have happened here and are written from
+the incident; the fifth cannot happen, and its page proves the absence with a bytecode selector scan
+carrying a positive control rather than rehearsing a procedure for absent code.
+
+Every command in every page was run against the live chain first, which is how two were found wrong:
+`cast interface` does not take `--rpc-url` on a chain with no Etherscan, and the pool address is
+discovered from `DREAMDEX_MARKET_ID` rather than being an environment variable at all.
+
+That turned up D-045. `.env.example` defines every address key empty, because naming the keys is
+what it is for. An empty value is a string, so it passed `=== undefined` guards and — worse — won an
+`??` chain against the deployment record in the verifier CLI, the command the app puts in front of a
+stranger. A blank env var read as an empty address while a correct record sat unused beside it.
+Fixed at all three raw call sites; `probe/shared.ts` already had it right.
+
+## 2026-09-11 — The run is finished, and every surface now says so
+
+The recovered 50 STT arrived about forty minutes after the window closed, and sampling had stopped
+long before that. Restoring live coverage needed a fresh registry and subscriber, both immutably
+wired. Put to the owner, who chose to keep the finished run. Nothing further is deployed.
+
+```
+blocks 484439389 -> 484519171    29541 samples, 1899 distinct blocks
+  SPREAD_BREACH     29227        source: REACTIVITY 29541, KEEPER 0
+  DEPTH_BREACH        204        0 log windows failed
+  COVERED_AT_SAMPLE   110
+```
+
+That scan reproduces `sampleCount` and `breachCount` exactly (29,227 + 204 = 29,431) from events
+rather than from either counter, so the two agree without being derived from each other.
+
+The risk was then tense, not data. A finished run in a live-sounding voice misleads even when every
+number is right, because a reader takes the tense as part of the claim.
+
+- `README.md` carried mid-run counts — 8,664 samples, two states. Now the final figures, the command
+  that reproduces them, and the fact that sampling ended *before* the window did, leaving instants
+  that are `NOT_SAMPLED` and are not counted as coverage.
+- `apps/web` told a maker composing an envelope "It would hold right now", from the latest *stored*
+  sample. The newest sample that exists is not a current one. It names the block it read.
+- `pnpm evidence:report` could only scan backwards from the head, so it reported zero samples for a
+  run of 29,541 — a completed run was undescribable by the tool meant to describe runs. It takes
+  `--from` and `--to`, and an explicit range is labelled as covering only those blocks.
+
+D-046.
+
+## 2026-09-11 — Demo script written, and two beats that could not be shot as written
+
+PRD §23 beat 3 is "samples arrive, the coverage state changes in front of the viewer". There is no
+open window, so it cannot be performed. `docs/demo-script.md` shows the recorded stream and names it
+a completed run, because narrating a closed window in the present tense would be false in the one
+place an audience cannot check anything.
+
+Beat 4 ends, in §23, with a witnessed trader claiming the bond. There is no settlement function. The
+script says nobody was paid, out loud and not on a slide, and the wording carries into
+`submission.json` where the gate checks it is there.
+
+Every figure was re-read from chain before being written down, and the command the script says to
+run on camera was run first: `pnpm assize verify 0`, 8 checks, exit 0.
