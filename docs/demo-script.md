@@ -16,17 +16,17 @@ at about 1:55 at a normal narration pace.
 
 ---
 
-A market shows you a price. That price is a claim about an order book you cannot see, and nothing checks it. A market maker can look tight and disappear the moment it matters. You find out by losing money.
+A DreamDEX event contract market shows a price. That price is produced by an order book, and an order book can be empty. On a thin book the displayed number is the residue of whoever quoted last, not a price anyone will trade with you at. Nothing records that this happened, and the venue's liquidity claim survives contact with no evidence at all.
 
-Assize makes them put money on it first. Before the window opens, a maker publishes a commitment on chain. Maximum spread, fifteen thousand. Minimum depth, ten million. One token bonded behind it. Not a promise you have to trust. A statement that can be checked.
+Assize is the instrument that makes it binding. A maker publishes a quoting commitment before the window opens: maximum spread, fifteen thousand raw price units. Minimum depth, ten million on both sides. One token, bonded against it. An assize was a fixed public standard with a penalty attached.
 
-Here is how Assize checks it. Every time the market emits an event, Somnia's validators wake our handler inside that same block. It reads the book at that instant and stores what it saw, pinned to the block it came from. The contract compares that reading against the commitment and labels it. Held, or breached. Six thousand and twenty-eight samples. One thousand three hundred and ninety-six breaches. We did not take these readings, and we cannot fake them.
+Enforcement is not ours to perform. Somnia's reactivity precompile invokes our handler inside the block that carried the market's event. The handler reads the top of the book at that instant and stores a sample: both prices, both sizes, the block number, and the parent hash that pins it to one block on one chain. The verdict is then computed from stored data alone. The envelope, and the sample. Nothing else. Six thousand and twenty-eight samples. One thousand three hundred and ninety-six breaches.
 
-Here is one. The book showed eight hundred and seventy-six thousand against eight hundred and ninety-seven thousand. A spread of twenty-one thousand, against a committed maximum of fifteen thousand. Breach. The bond is forfeited, and then it is paid, to a trader the registry saw filling an order inside that window. One token, on chain, in this transaction.
+Sample zero. Bid, eight hundred and seventy-six thousand. Ask, eight hundred and ninety-seven thousand. An absolute spread of twenty-one thousand, against a committed maximum of fifteen thousand. Spread breach. The bond forfeits on the first breach in the window, and settles pro rata to witnessed traders: addresses the registry saw filling inside that window, learned from the pool's own order logs. One token, this transaction.
 
-Two limits, said plainly. Assize measures instants, not intervals. One reading at one block, and never proof the book held between two. And a payout only ever reaches traders the chain saw trading. Hold a position, lose money, never trade in that window, and this pays you nothing.
+Two limits. Assize evaluates at sampled instants, not across intervals. And a payout reaches witnessed traders only.
 
-Make a commitment a listing requirement, and a venue can advertise its coverage because it has been measured, not because it says so. The instrument is small. What changes is whether a claim about a market survives contact with evidence.
+Commitments as a listing requirement for new markets. Coverage becomes something a venue advertises because the chain sampled it, not because the venue asserted it. What changes is whether a liquidity claim survives contact with evidence.
 
 ---
 
@@ -37,7 +37,7 @@ requires every beat to survive a cold start.
 
 ### Beat 1 · Problem · 0:00–0:17
 
-*"A market shows you a price… You find out by losing money."*
+*"A DreamDEX event contract market shows a price… no evidence at all."*
 
 | | |
 |---|---|
@@ -47,7 +47,7 @@ requires every beat to survive a cold start.
 
 ### Beat 2 · Solution · 0:17–0:38
 
-*"Assize makes them put money on it first… A statement that can be checked."*
+*"Assize is the instrument that makes it binding… a penalty attached."*
 
 | | |
 |---|---|
@@ -57,7 +57,7 @@ requires every beat to survive a cold start.
 
 ### Beat 3 · Product, how it works · 0:38–1:07
 
-*"Here is how Assize checks it… we cannot fake them."*
+*"Enforcement is not ours to perform… one thousand three hundred and ninety-six breaches."*
 
 | | |
 |---|---|
@@ -67,7 +67,7 @@ requires every beat to survive a cold start.
 
 ### Beat 4 · Demonstration · 1:07–1:45
 
-*"Here is one… this pays you nothing."*
+*"Sample zero… a payout reaches witnessed traders only."*
 
 | | |
 |---|---|
@@ -82,7 +82,7 @@ requires every beat to survive a cold start.
 
 ### Beat 5 · Future vision · 1:45–2:00
 
-*"Make a commitment a listing requirement… survives contact with evidence."*
+*"Commitments as a listing requirement… survives contact with evidence."*
 
 | | |
 |---|---|
