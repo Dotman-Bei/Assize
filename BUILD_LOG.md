@@ -1143,3 +1143,52 @@ script says nobody was paid, out loud and not on a slide, and the wording carrie
 
 Every figure was re-read from chain before being written down, and the command the script says to
 run on camera was run first: `pnpm assize verify 0`, 8 checks, exit 0.
+
+## 2026-09-11 — Hosted, and a browser sent to prove it
+
+`vercel.json` builds the static surface with the repo's own two commands, so the deployed bytes come
+from source rather than from a file copied by hand. **No environment variables**, and that is §17
+rather than a hosting convenience: no address is compiled into `apps/`, so the RPC URL, chain id and
+both contracts arrive through `deployment.json`. Nothing is left for a dashboard to supply. Routing
+is by hash, so no rewrite rules.
+
+Live at **https://assize.vercel.app**.
+
+`pnpm submission:check` asks whether the URL answers 200 and mentions Assize. Right question for a
+submission gate, not enough to know the thing works — a page that loads and then fails to read the
+chain answers 200 with an empty shell. So `pnpm check:live` drives the deployed page in a browser:
+
+```
+ok  sample count from chain    29541, matching sampleCount
+ok  breach count from chain    29431, matching breachCount
+ok  breach rows listed         25 row(s)
+ok  dossier opens on click     registry address, block pin, verify command
+ok  no console errors          none
+LIVE CHECK PASSED
+```
+
+The dossier check clicks a row, because that is the core action and it sits behind a click rather
+than a URL. A route-only check never reaches it. **G7 is met.**
+
+Two faults in that script, both mine, both found by running it. It printed `FAIL` on a line and then
+exited 0, because the exit code consulted only the console-error count — a gate reporting a failure
+and passing anyway. And it carried a *copy* of `e2e.mjs`'s browser finder which had dropped
+`chrome-linux64`, the only layout on this machine; the copy could not launch a browser while the
+original kept passing. Both now import `scripts/find-chromium.mjs`, so there is one implementation
+to be wrong.
+
+## 2026-09-11 — Finding 9, and the half of §20 that needs no account
+
+`FEEDBACK.md` gains finding 9: `SomniaExtensions.unsubscribe` reverts on a subscription the chain has
+already removed, which permanently wedges the handler. Not a restatement of 5 or 6 — those are about
+a subscription being removed and a handler running out of gas. This is the recovery path being
+closed, and the wedge is latent in every contract built on the helper rather than a mistake in ours.
+
+`README.md` now *links* `FEEDBACK.md` rather than naming it, which is §20's second half and the part
+that needs no account. `submission.json` carries beat 4's wording, so that gate item passes.
+
+`feedbackFiledAt` stays null. It feeds a gate, and filling it in before the report is filed would
+make that gate assert something untrue.
+
+`docs/filing-feedback.md` holds a paste-ready issue for the Bot Kit, which has issues enabled;
+`@somnia-chain/reactivity-contracts` has no public repository, so finding 9 has no tracker of its own.

@@ -11,6 +11,7 @@
   "scripts": {
     "assize": "tsx packages/verifier/src/cli.ts",
     "build": "pnpm -r --if-present build",
+    "check:done": "tsx scripts/done-check.ts",
     "check:live": "node scripts/live-check.mjs",
     "check:no-address-literals": "tsx scripts/checks/no-address-literals.ts",
     "check:paths": "tsx scripts/checks/no-absolute-paths.ts",
