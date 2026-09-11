@@ -7,7 +7,7 @@
  * public RPC, which is the product's own claim applied to its interface.
  * PRD §17: no address is compiled in; the deployment record arrives at runtime.
  */
-import { createPublicClient, http, formatEther, parseEther, encodeFunctionData, custom, createWalletClient } from "viem";
+import { createPublicClient, http, formatEther, parseEther, encodeFunctionData, custom, createWalletClient, defineChain } from "viem";
 import { verdict as evaluate } from "@assize/reference";
 import { VERDICT_STATES, sampleSourceFromCode } from "@assize/protocol-types";
 import { icon } from "./icons.js";
@@ -65,6 +65,25 @@ function chainIdOf(value) {
   const text = value.trim();
   const parsed = /^0x/iu.test(text) ? parseInt(text, 16) : parseInt(text, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * The chain viem needs in order to sign, assembled from the deployment record.
+ *
+ * `createWalletClient` without a `chain` cannot send a transaction: viem raises
+ * "No chain was provided to the request", and the publish form surfaced that to
+ * the user as a bare failure with no action available to them. Every field here
+ * comes from the record, so a different network means a different record and not
+ * an edit to this file.
+ */
+function walletChain() {
+  return defineChain({
+    id: Number(S.cfg.chainId),
+    name: S.cfg.displayName,
+    nativeCurrency: S.cfg.nativeCurrency,
+    rpcUrls: { default: { http: [S.rpc] } },
+    blockExplorers: { default: { name: S.cfg.displayName, url: S.explorer } },
+  });
 }
 
 const S = { one: 1_000_000n, commitments: [], samples: [], filter: "all", q: "", bq: "", account: null, step: 0 };
@@ -621,7 +640,11 @@ async function doPublish() {
     args: [$("#fMarket").value, BigInt($("#fSpread").value), BigInt($("#fDepth").value),
            start, start + BigInt($("#fWindow").value)] });
   try {
-    const wallet = createWalletClient({ transport: custom(globalThis.ethereum) });
+    // The chain is required, and it is built from the deployment record rather
+    // than written here (PRD §17). Without it viem refuses to send at all:
+    // "No chain was provided to the request", which reached a user as a failed
+    // Post Commitment with nothing they could do about it.
+    const wallet = createWalletClient({ chain: walletChain(), transport: custom(globalThis.ethereum) });
     const hash = await wallet.sendTransaction({ account, to: S.registry, data, value: parseEther(String($("#fBond").value)) });
     $("#publishState").innerHTML = `<div class="note"><strong>Posted.</strong>
       <a class="navlink" href="${S.explorer}/tx/${hash}" target="_blank" rel="noopener">${cut(hash, 12, 8)} →</a></div>`;

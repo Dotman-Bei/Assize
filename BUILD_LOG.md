@@ -1424,3 +1424,27 @@ records the departure, because `frontend.md` is the design authority and this is
 `pnpm test:e2e` then failed, correctly: the chain double returned 2 STT, which sat below the old
 39 STT threshold and above the new one, so G10's insufficient-balance state was no longer reachable.
 The fixture returns 0.5 STT now and all six states pass again.
+
+## 2026-09-11 — "No chain was provided to the request"
+
+Reported from the live app, on pressing Post Commitment:
+
+```
+Not posted. No chain was provided to the request. Please provide a chain with the
+`chain` argument on the Action, or by supplying a `chain` to WalletClient.
+```
+
+`createWalletClient({ transport: custom(globalThis.ethereum) })` was built without a `chain`, and
+viem refuses to send a transaction without one. The form caught the error and displayed it, which is
+the only reason it was legible at all — but to a user it was a failed action with nothing they could
+do about it.
+
+The chain is now assembled from the deployment record: id, display name, native currency, RPC and
+explorer. Not written in the source, per PRD §17 — a different network means a different record
+rather than an edit to `main.js`. The record gained `displayName` and `nativeCurrency` alongside the
+`explorerUrl` added earlier today.
+
+**This is a coverage gap, not just a bug.** `pnpm test:e2e` drives the app through six states with a
+chain double and passes, and it has never once exercised the publish *submit* path, because the
+double has no wallet. Three defects have now been found on that path by hand — the chain id check,
+the phantom prefund, and this — and the gate that covers the app found none of them.
