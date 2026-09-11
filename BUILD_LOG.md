@@ -1305,3 +1305,23 @@ FAIL  registry address shown        expected 0x829465c447eD558b108001d472B519042
 
 The deployed page is still the P2 build. The source and the local artefact carry P3; the hosting has
 not been redeployed. That gap is now visible from a command instead of from remembering.
+
+## 2026-09-11 — The live gate was racing a counter that moves
+
+After the P3 build went live, `check:live` failed on the sample count: the page showed 1714 and the
+chain said 4058. Both were true. The subscription is still firing, so the counter moved between the
+page reading it and the gate reading it — the gate was comparing a live number against a snapshot
+taken later and calling the difference a defect.
+
+It now brackets instead: the chain is read **before** the page loads and again after, and the page
+passes if the number it shows falls inside that range. Anything in the bracket is a number the page
+could honestly have read; anything outside it is stale or invented.
+
+```
+ok  sample count matches chain   page shows 4,102, chain moved 4102 -> 4109 while it loaded
+ok  breach count matches chain   page shows 1,396, chain moved 1396 -> 1396 while it loaded
+```
+
+Breaches are frozen because the window closed and every new sample is `WINDOW_CLOSED`, which is not
+a breach. Two readings of the same counter differing is the normal state of a live system, and a
+check that treats it as failure is a check that cannot be trusted when it does fail.

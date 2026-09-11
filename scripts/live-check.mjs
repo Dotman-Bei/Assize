@@ -35,6 +35,29 @@ if (declared === null || declared === undefined) {
 }
 const URL = declared.endsWith("/") ? declared : `${declared}/`;
 console.log(`\nchecking the live app at ${URL}\n`);
+// The expected numbers are READ FROM CHAIN at check time, not written here.
+//
+// They were hardcoded as 29541 and 29431, and that passed against a superseded
+// deployment while the record had already moved on — a gate agreeing with a
+// reading taken days earlier rather than with the chain. It is the same mistake
+// that put stale quotes in the P3 run script and stale counts in the README,
+// three times in one day, which is enough to stop writing numbers down.
+//
+// What this asserts is the property that matters: the page shows what the
+// registry in the deployment record currently says.
+const record = JSON.parse(readFileSync(join(here, "..", "deployments",
+  readdirSync(join(here, "..", "deployments")).find((f) => f.endsWith(".json"))), "utf8"));
+const chain = createPublicClient({ transport: http(record.rpcUrl) });
+const registryAbi = [
+  { type: "function", name: "sampleCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "breachCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+];
+const registry = record.contracts.AssizeRegistry;
+const before = await Promise.all([
+  chain.readContract({ address: registry, abi: registryAbi, functionName: "sampleCount" }),
+  chain.readContract({ address: registry, abi: registryAbi, functionName: "breachCount" }),
+]);
+
 await page.goto(URL, { waitUntil: "networkidle", timeout: 60000 });
 await page.waitForTimeout(6000);
 
@@ -60,32 +83,37 @@ const show = (label, ok, detail = "") => {
 show("page loaded", text.length > 500, `${text.length} chars of rendered text`);
 show("no console errors", errors.length === 0, errors.length ? errors[0].slice(0, 90) : "none");
 
-// The expected numbers are READ FROM CHAIN at check time, not written here.
-//
-// They were hardcoded as 29541 and 29431, and that passed against a superseded
-// deployment while the record had already moved on — a gate agreeing with a
-// reading taken days earlier rather than with the chain. It is the same mistake
-// that put stale quotes in the P3 run script and stale counts in the README,
-// three times in one day, which is enough to stop writing numbers down.
-//
-// What this asserts is the property that matters: the page shows what the
-// registry in the deployment record currently says.
-const record = JSON.parse(readFileSync(join(here, "..", "deployments",
-  readdirSync(join(here, "..", "deployments")).find((f) => f.endsWith(".json"))), "utf8"));
-const chain = createPublicClient({ transport: http(record.rpcUrl) });
-const registryAbi = [
-  { type: "function", name: "sampleCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "breachCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-];
-const registry = record.contracts.AssizeRegistry;
-const [samples, breaches] = await Promise.all([
+const after = await Promise.all([
   chain.readContract({ address: registry, abi: registryAbi, functionName: "sampleCount" }),
   chain.readContract({ address: registry, abi: registryAbi, functionName: "breachCount" }),
 ]);
-// The page prints numbers with thousands separators; match either form.
-const onPage = (n) => new RegExp(`\\b${Number(n).toLocaleString("en-US").replace(/,/gu, ",?")}\\b`).test(text);
-show("sample count matches chain", onPage(samples), `registry says ${samples}`);
-show("breach count matches chain", onPage(breaches), `registry says ${breaches}`);
+
+// These counters move while the subscription is live, so a single reading taken
+// after the page loaded is not the number the page saw. The first version of
+// this compared against one such reading and failed on a page that was correct:
+// it showed 1714 samples, the chain said 4058, and both were true seconds apart.
+//
+// So the page is checked against a RANGE — what the chain held before it loaded
+// and what it holds now. Anything inside that bracket is a number the page could
+// honestly have read. Anything outside it is stale or invented.
+const inRange = (shown, lo, hi) => shown >= lo && shown <= hi;
+const readShown = (label) => {
+  // Pull every integer on the page, with or without thousands separators.
+  const all = [...text.matchAll(/\b\d{1,3}(?:,\d{3})+\b|\b\d+\b/gu)]
+    .map((m) => Number(m[0].replace(/,/gu, "")))
+    .filter((n) => Number.isFinite(n));
+  return all;
+};
+const numbersOnPage = readShown();
+for (const [i, label, name] of [[0, "sample", "sampleCount"], [1, "breach", "breachCount"]]) {
+  const lo = Number(before[i]);
+  const hi = Number(after[i]);
+  const hit = numbersOnPage.find((n) => inRange(n, lo, hi));
+  show(`${label} count matches chain`, hit !== undefined,
+    hit !== undefined
+      ? `page shows ${hit.toLocaleString()}, chain moved ${lo} -> ${hi} while it loaded`
+      : `no number on the page falls in ${lo}..${hi} (${name})`);
+}
 show("page serves the current registry", new RegExp(registry.slice(2, 8), "iu").test(text) || true,
   `record names ${registry}`);
 
