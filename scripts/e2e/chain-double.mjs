@@ -27,6 +27,9 @@ const abi = [
         { name: "bidSize", type: "uint128" }, { name: "askSize", type: "uint128" },
         { name: "blockNumber", type: "uint64" }, { name: "blockHash", type: "bytes32" },
         { name: "source", type: "uint8" }] }] }] },
+  { type: "function", name: "activeCommitmentOf", stateMutability: "view",
+    inputs: [{ type: "address" }, { type: "bytes32" }],
+    outputs: [{ name: "found", type: "bool" }, { name: "commitmentId", type: "uint256" }] },
   { type: "function", name: "commitmentAt", stateMutability: "view", inputs: [{ type: "uint256" }],
     outputs: [{ type: "tuple", components: [
       { name: "maker", type: "address" }, { name: "marketId", type: "bytes32" },
@@ -117,6 +120,9 @@ function ethCall(data, scenario) {
       case "verdictOf": return pick.verdict;
       case "breachAt": return { commitmentId: 0n, sampleId: 0n };
       case "commitmentAt": return commitment;
+      // No active commitment for the connected wallet, so the publish form
+      // reaches its funding states rather than stopping at the §10 guard.
+      case "activeCommitmentOf": return [false, 0n];
       case "sampleAt": return { commitmentId: 0n, sample: pick };
       default: return 0n;
     }

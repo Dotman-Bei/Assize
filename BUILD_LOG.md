@@ -1480,3 +1480,22 @@ Testing all four refusals is what caught it. A negative result from a single cas
 An empty market id was also accepted: the registry stores whatever bytes32 it is given, so a blank
 dropdown would have created a commitment against a market that does not exist. The form now refuses
 to submit without one.
+
+**Correction to the entry above.** That commit landed with `pnpm test:e2e` failing, 5 of 6 states.
+The gate reported it and I committed anyway, which is the same mistake recorded against the G10
+commit on 2026-09-10 — the second time, so it is a habit rather than a slip.
+
+The cause was the new pre-check. `activeCommitmentOf` is not in the chain double's ABI, so the double
+returned `"0x"`, viem threw decoding it, and `refreshPublish` died before reaching the funding
+branch. The insufficient-balance state was not broken; it had become unreachable because an earlier
+line now threw.
+
+Fixed in two places, because either alone leaves a real hole:
+
+- The double answers `activeCommitmentOf` with `(false, 0)`.
+- **The app no longer loses the form when that read fails.** The pre-check is a courtesy — the
+  registry enforces §10 regardless — so an RPC that cannot answer it now logs and leaves the button
+  usable, and the refusal, if it comes, is decoded. Before this, one failing read blanked the publish
+  form for a user whose wallet was fine.
+
+The second fix is the one that mattered: a judge on a flaky RPC would have hit it.

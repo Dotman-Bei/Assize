@@ -626,9 +626,18 @@ async function refreshPublish() {
   // Asked here instead, while the answer can still be a sentence.
   const market = $("#fMarket").value;
   if (S.account && market) {
-    const [found, existingId] = await S.client.readContract({
-      address: S.registry, abi, functionName: "activeCommitmentOf", args: [S.account, market],
-    });
+    // A failed read here must not cost the user the form. This check is a
+    // courtesy — the registry enforces the rule regardless — so an RPC that
+    // cannot answer it leaves the button usable and the refusal, if it comes,
+    // is decoded by {publishError}. It is logged rather than swallowed.
+    let found = false, existingId = 0n;
+    try {
+      [found, existingId] = await S.client.readContract({
+        address: S.registry, abi, functionName: "activeCommitmentOf", args: [S.account, market],
+      });
+    } catch (error) {
+      console.error("activeCommitmentOf could not be read:", error.shortMessage ?? error.message);
+    }
     if (found) {
       const existing = await S.client.readContract({
         address: S.registry, abi, functionName: "commitmentAt", args: [existingId],
