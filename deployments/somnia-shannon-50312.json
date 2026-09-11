@@ -12,6 +12,7 @@
   "network": "somnia-shannon-testnet",
   "chainId": 50312,
   "rpcUrl": "https://dream-rpc.somnia.network",
+  "explorerUrl": "https://shannon-explorer.somnia.network",
   "deployedAt": "2026-09-11",
   "phase": "P3",
   "contracts": {

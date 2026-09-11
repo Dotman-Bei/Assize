@@ -1360,3 +1360,34 @@ the difference is explained rather than averaged away.
 Breaches stop at 1,396 while samples reach 6,028: once the window closed every further sample is
 `WINDOW_CLOSED`, which is neither a breach nor coverage. The gap between those two numbers is the
 protocol working.
+
+## 2026-09-11 — The app told a wallet on the right network to switch to it
+
+Reported from a Rabby wallet already on Somnia Shannon: the connect flow showed "Wrong network,
+please switch to Somnia Shannon (Chain ID: 50312)".
+
+The check was `parseInt(chainId, 16) !== 50312`. EIP-1193 says `eth_chainId` returns a hex string and
+MetaMask does, so that is right for `"0xc488"`. Rabby returns a number, or a decimal string, and
+`parseInt(50312, 16)` is **328466** — never equal to 50312, so the wallet was refused for being on
+exactly the network it was on.
+
+```
+ok         parseInt("0xc488", 16) =  50312   hex string
+WRONG NET  parseInt(50312, 16)    = 328466   number (Rabby)
+WRONG NET  parseInt("50312", 16)  = 328466   decimal string
+```
+
+`chainIdOf` now normalises whatever arrives — number, hex string, decimal string, padded or
+uppercase — and returns null rather than a wrong number when it cannot read one. Seven shapes
+covered, including the two garbage cases.
+
+The modal also shows what the wallet reported. The old one asserted the network was wrong and gave a
+user no way to see why, which is what made this take a bug report rather than a glance.
+
+**Two compiled-in protocol facts went with it.** The expected chain id was a literal in the
+comparison, and the explorer URL and the footer's "Chain 50312" were literals too. PRD §17 says the
+app compiles in no protocol fact; all three now come from the deployment record, which gained
+`explorerUrl`. `pnpm test:e2e` still passes all six states.
+
+This one is worth noting for G9: it would have failed the first tester who used anything but
+MetaMask, and it would have looked like their wallet's fault.

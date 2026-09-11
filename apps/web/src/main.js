@@ -47,6 +47,26 @@ const src = (s) => `<span class="src src-${s}">${s}</span>`;
 const bps = (raw, one) => (one > 0n ? (raw * 10_000n) / one : 0n);
 const num = (v) => Number(v).toLocaleString();
 
+/**
+ * A wallet's chain id, as a number, whatever shape it arrived in.
+ *
+ * EIP-1193 says `eth_chainId` returns a hex string, and MetaMask does. Rabby
+ * hands back a number, or a decimal string. The check here was
+ * `parseInt(chainId, 16) !== 50312`, which is right for "0xc488" and wrong for
+ * everything else: `parseInt(50312, 16)` is 328466, so a wallet sitting on
+ * Somnia Shannon was told to switch to Somnia Shannon.
+ *
+ * @param {string|number} value whatever the wallet returned
+ * @returns {number|null} the chain id, or null if it could not be read
+ */
+function chainIdOf(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  const parsed = /^0x/iu.test(text) ? parseInt(text, 16) : parseInt(text, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 const S = { one: 1_000_000n, commitments: [], samples: [], filter: "all", q: "", bq: "", account: null, step: 0 };
 
 /* frontend.md §3 Page 1 Section 4: the five steps, verbatim, with what each
@@ -67,7 +87,12 @@ async function boot() {
   S.client = createPublicClient({ transport: http(S.rpc) });
   S.registry = record.contracts.AssizeRegistry;
   S.subscriber = record.contracts.CoverageSubscriber;
-  S.explorer = "https://shannon-explorer.somnia.network";
+  // From the record, not written here. PRD §17: the app compiles in no protocol
+  // fact, and an explorer URL is one — it changes with the network.
+  S.explorer = record.explorerUrl;
+  // The footer's chain label came from the same place the chain id check did:
+  // a literal in the source. Both now read the record.
+  $("#footChain").textContent = `Chain ${record.chainId}`;
   $("#footExplorer").href = S.explorer;
   $("#footRegistry").href = `${S.explorer}/address/${S.registry}`;
   $("#footSubscriber").href = `${S.explorer}/address/${S.subscriber}`;
@@ -661,11 +686,15 @@ async function connect() {
     return null;
   }
   const [account] = await globalThis.ethereum.request({ method: "eth_requestAccounts" });
-  const chainId = await globalThis.ethereum.request({ method: "eth_chainId" });
-  if (parseInt(chainId, 16) !== 50312) {
-    // §4 network mismatch state.
+  const reported = await globalThis.ethereum.request({ method: "eth_chainId" });
+  const expected = Number(S.cfg.chainId);
+  if (chainIdOf(reported) !== expected) {
+    // §4 network mismatch state. The detected value is shown, because the first
+    // version of this told a wallet that was on the right network to switch to
+    // it, and there was nothing on screen to say why.
     $("#overlay").innerHTML = `<div class="modal-scrim"><div class="modal">
-      <h2>Wrong network</h2><p class="h2-sub">Please switch network to Somnia Shannon (Chain ID: 50312).</p>
+      <h2>Wrong network</h2><p class="h2-sub">Please switch network to Somnia Shannon (Chain ID:
+      ${expected}). Your wallet reports ${chainIdOf(reported) ?? "an unreadable chain id"}.</p>
       <button class="btn btn-white" data-close>Close</button></div></div>`;
     return null;
   }
