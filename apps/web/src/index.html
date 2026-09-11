@@ -209,8 +209,8 @@
         <p>A maker publishes a quoting commitment on a DreamDEX event contract, backs it with a bond,
           and Somnia validators sample whether it held. Every verdict points back to a transaction you
           can open yourself.</p>
-        <p class="footer-caveat">Samples at instants, not continuously. No payout path is deployed:
-          a forfeited bond is recorded, not distributed.</p>
+        <p class="footer-caveat">Samples at instants, not continuously. A forfeited bond is paid to
+          traders the chain saw filling inside the window, and to nobody else.</p>
       </div>
 
       <nav class="footer-col" aria-label="App">
@@ -233,16 +233,16 @@
 
       <nav class="footer-col" aria-label="Product">
         <h4>Product</h4>
-        <a href="#/">How it works</a>
+        <a href="#/" data-scroll="lifecycle">How it works</a>
         <a href="#/verify">Verification</a>
-        <a href="#/">What is measured</a>
+        <a href="#/" data-scroll="boundaries">What is measured</a>
         <a id="footRegistry" target="_blank" rel="noopener">Registry contract <span data-icon="ArrowUpRight" class="ext"></span></a>
         <a id="footSubscriber" target="_blank" rel="noopener">Subscriber contract <span data-icon="ArrowUpRight" class="ext"></span></a>
       </nav>
     </div>
 
     <div class="footer-bottom">
-      <span>Assize Protocol. Somnia × DreamDEX Event Contracts Hackathon.</span>
+      <span>Assize Protocol.</span>
       <span class="mono" id="footVerified">verified on Somnia Shannon</span>
     </div>
   </div>

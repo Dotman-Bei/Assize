@@ -163,6 +163,20 @@ function wire() {
     if (c) { await navigator.clipboard.writeText(c.dataset.copy); const t = c.textContent; c.textContent = "copied"; setTimeout(() => { c.textContent = t; }, 1200); return; }
     const chip = e.target.closest(".chip");
     if (chip) { S.filter = chip.dataset.f; $$(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === chip))); renderMarkets(); return; }
+    // Footer links that name a section rather than a page. The router owns the
+    // hash, so a plain `#lifecycle` anchor would be read as an unknown route,
+    // fall back to Overview, and then be scrolled to the top by `route()` — a
+    // link that appears to work and silently lands you somewhere else. These
+    // route first and scroll after.
+    const scroller = e.target.closest("[data-scroll]");
+    if (scroller) {
+      const target = scroller.dataset.scroll;
+      if (location.hash !== "#/") location.hash = "#/";
+      setTimeout(() => {
+        document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+      return;
+    }
     const marketRow = e.target.closest("tr[data-market]");
     if (marketRow) {
       const c = S.commitments.find((x) => String(x.id) === marketRow.dataset.market);

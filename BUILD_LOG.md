@@ -1561,3 +1561,26 @@ confirm it was gone.
 
 Footprint 332px to 196px, glyph size unchanged. **The measurement that mattered was a picture**, which
 is the same lesson as D-037, D-040 and D-041 and the fourth time this repository has learned it.
+
+## 2026-09-11 — The footer, audited link by link
+
+`pnpm audit:ui` gained a footer pass: every anchor, whether it has an href at all, whether a hash
+link names a real route, and whether the copy still says things the deployment has falsified.
+
+**All thirteen links work.** Six app routes, two contract links and the explorer built from the
+deployment record, and the DreamDEX docs.
+
+Three findings, all copy:
+
+- *"No payout path is deployed: a forfeited bond is recorded, not distributed."* False since P3
+  shipped. This is the **third** place that sentence survived in — the lifecycle panel, the claim
+  page, and here — after I corrected the first and thought the job done. A claim repeated in three
+  places needs finding in three places, and only a grep for the sentence finds them all.
+- *"Somnia × DreamDEX Event Contracts Hackathon."* Removed, as asked.
+
+Two links also went somewhere weaker than they looked. "How it works" and "What is measured" both
+pointed at `#/`, which is the Overview page and not the sections they name — and a plain
+`#lifecycle` anchor could not fix it, because the router owns the hash: an unknown route falls back
+to Overview and `route()` then scrolls to the top. A link that appears to work and quietly lands you
+somewhere else is worse than one that does nothing, because nobody reports it. They route first and
+scroll after now.

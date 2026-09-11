@@ -136,6 +136,39 @@ for (const stale of ["witnesses no fills", "not deployed here", "no wallet did",
   if (claimText.includes(stale)) dead("claim page copy", `still says "${stale}"`);
 }
 
+/* -------------------------------- footer --------------------------------- */
+console.log("\nfooter");
+await page.goto(URL, { waitUntil: "networkidle", timeout: 45000 });
+await page.waitForTimeout(4000);
+
+// Every anchor in the footer, and whether it points anywhere. An <a> whose href
+// is never filled in renders as a link, hovers like a link, and does nothing —
+// the same failure class as the Details cell.
+const footerLinks = await page.$$eval("footer a", (as) => as.map((a) => ({
+  label: a.textContent.trim().replace(/\s+/gu, " "),
+  href: a.getAttribute("href"),
+})));
+for (const link of footerLinks) {
+  if (link.href === null || link.href === "" || link.href === "#") {
+    dead(`footer "${link.label}"`, "no href — renders as a link, goes nowhere");
+  } else {
+    ok(`footer "${link.label}"`, link.href.length > 44 ? link.href.slice(0, 44) + "\u2026" : link.href);
+  }
+}
+
+// A hash link must land on a real route rather than falling back to Overview.
+const routes = ["/", "/markets", "/publish", "/breaches", "/claim", "/verify"];
+for (const link of footerLinks.filter((l) => (l.href ?? "").startsWith("#"))) {
+  const route = link.href.slice(1) || "/";
+  if (!routes.includes(route)) dead(`footer "${link.label}"`, `${link.href} is not a route`);
+}
+
+// Statements the deployment has falsified.
+const footText = await page.$eval("footer", (f) => f.innerText);
+for (const stale of ["No payout path is deployed", "not distributed", "Hackathon"]) {
+  if (footText.includes(stale)) dead("footer copy", `still says "${stale}"`);
+}
+
 /* -------------------------------- report -------------------------------- */
 console.log("\nconsole errors:", errors.length === 0 ? "none" : errors.length);
 for (const e of errors.slice(0, 3)) console.log("   ", e.slice(0, 100));
