@@ -1614,3 +1614,41 @@ touch widths and teaching it about scrollers left **two genuine defects**:
 cannot reach, and it was on the route a judge is most likely to open.
 
 Now clean at 320, 390, 430, 768, 1024, 1280 and 1920.
+
+---
+
+## D-051: A mark drawn from the mechanism, not borrowed from the category
+
+**Date:** 2026-09-11, Phase P4
+**Status:** accepted, extending `frontend.md` on the owner's instruction
+
+**Evidence.** The favicon was Lucide's scales-of-justice glyph. Borrowed rather than drawn, generic
+to the whole category of anything legal, and at 16px it collapsed into an indistinct shape.
+`frontend.md` specifies a brand block — `"ASSIZE" (font-mono, font-bold, tracking-widest, text-sm)` —
+and no mark at all. The owner asked for one directly, which settles the question the standing
+instruction would otherwise raise.
+
+**The mark.** Three strokes: two rules with returns, and a short rule between them. A bound, and a
+reading held inside it — drawn the way a fixed span is drawn in a technical drawing, because that is
+what a commitment is. PRD §1 gives the name its meaning, *a fixed public standard with a penalty
+attached*, and the mark is the standard rather than the penalty. It is also the product's own
+diagram: the rules are the maximum spread, the short rule is one block-pinned sample.
+
+**Two candidates were drawn and discarded, and the reason is worth keeping.** A bare cross between
+two rules renders as **工**. Adding a centre rule renders as **王**. Both are CJK characters in common
+use, and a mark that reads as an unrelated word to a large part of the world is not a mark. It was
+caught by rendering the candidates at 16, 32, 64 and 128 and looking at them, not by reasoning about
+the geometry — the same method that caught the wordmark clipping earlier today.
+
+The returns on the ends of each rule are what break that reading. They are also more accurate: a
+bound has ends.
+
+**Constraints kept.** Monochrome, `--text-primary` on `--bg-canvas`. The same hairline stroke weight
+as the interface. No gradient, shadow, blur or fill, per `frontend.md`'s zero-elevation rule. **No
+verdict colour anywhere**, because those seven colours carry meaning here and spending one
+decoratively would make a badge mean less (D-034).
+
+**One discrepancy surfaced and left alone.** `frontend.md` specifies the brand block in `font-mono`;
+the app renders `.brand` in `--font-sans`. The lockup follows the document. The header was not
+changed, because correcting one of two places silently is worse than a recorded difference, and the
+document is the authority. Owner's call.

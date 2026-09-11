@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 32" width="672" height="128" role="img" aria-label="Assize">
+  <title>Assize</title>
+  <!-- Mark at 24, wordmark in mono at 17px with wide tracking, per frontend.md's
+       brand block: font-mono, bold, tracking-widest. The gap between them is one
+       mark-width over three, which is the clear space rule in brand/README.md. -->
+  <g transform="translate(2 4)">
+    <path d="M3.5 8v-3h17v3M3.5 16v3h17v-3M8.5 12h7"
+          fill="none" stroke="#08080a" stroke-width="1.7" stroke-linecap="square"/>
+  </g>
+  <text x="40" y="21" fill="#08080a"
+        font-family="Geist Mono, JetBrains Mono, ui-monospace, SFMono-Regular, monospace"
+        font-size="17" font-weight="700" letter-spacing="3.6">ASSIZE</text>
+</svg>

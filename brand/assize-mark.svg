@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="256" height="256" role="img" aria-label="Assize">
+  <title>Assize</title>
+  <!-- The bound, and a reading held inside it. Two rules with returns are how a
+       fixed span is drawn; the short rule between them is the sample. PRD §1:
+       an assize was a fixed public standard with a penalty attached. -->
+  <path d="M3.5 8v-3h17v3M3.5 16v3h17v-3M8.5 12h7"
+        fill="none" stroke="#f4f4f5" stroke-width="1.7" stroke-linecap="square"/>
+</svg>

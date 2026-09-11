@@ -1646,3 +1646,24 @@ is what the script cites now.
 It was caught by re-reading every figure from chain after writing them down, which is the only reason
 the first version's numbers looked right: they were real numbers, from a real sample, that meant
 something else. **A figure being on chain does not make the sentence around it true.**
+
+## 2026-09-11 — A logo, drawn from the mechanism
+
+The favicon was Lucide's scales-of-justice glyph: borrowed, generic to anything legal, and at 16px an
+indistinct shape. `brand/` now holds a mark drawn from what the product actually does — two rules
+with returns and a short rule between them, a bound with a reading held inside it.
+
+Four candidates were rendered at 16, 32, 64 and 128 and looked at before choosing. **Two were
+discarded for reading as CJK characters**: a bare cross between two rules is **工**, and adding a
+centre rule is **王**. Reasoning about the geometry would never have surfaced that. Rendering it and
+looking did, which is now the fourth time today that has been the deciding method.
+
+Files: the mark on dark and light, an avatar on its canvas square for anything that crops to a
+circle, and the horizontal lockup in both polarities. `brand/README.md` carries the clear-space rule
+(one third of the mark's width, which the lockup's own gap demonstrates), the 16px minimum, and the
+prohibition that matters most: **never a verdict colour**, because those seven carry meaning and
+spending one decoratively makes a badge mean less.
+
+The favicon is the new mark, inlined as a data URI. D-051 records the reasoning, including a
+discrepancy left deliberately alone: `frontend.md` specifies the brand block in mono and the app
+renders it in sans. The lockup follows the document; the header was not silently corrected.
